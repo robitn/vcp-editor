@@ -40,7 +40,7 @@ function App() {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [imageCacheBuster, setImageCacheBuster] = useState(Date.now());
   const unsavedDialogResolve = useRef<((result: UnsavedChangesResult) => void) | null>(null);
-  
+
   const undoRedoManager = useRef(new UndoRedoManager());
   const store = useRef<Store | null>(null);
   const windowSaveTimeout = useRef<number | null>(null);
@@ -98,17 +98,17 @@ function App() {
   useEffect(() => {
     const initStore = async () => {
       const appWindow = getCurrentWindow();
-      
+
       try {
         store.current = await Store.load('settings.json');
         console.log('Store loaded successfully');
-        
+
         // Load app settings
         const savedSettings = await store.current.get<AppSettings>('appSettings');
         if (savedSettings) {
           setSettings(savedSettings);
         }
-        
+
         // Restore window position and size
         const windowState = await store.current.get<WindowState>('windowState');
         if (windowState) {
@@ -119,7 +119,7 @@ function App() {
         } else {
           console.log('No saved window state found');
         }
-        
+
         // Try to open last file
         const lastFilePath = await store.current.get<string>('lastFilePath');
         if (lastFilePath && typeof lastFilePath === 'string') {
@@ -178,28 +178,41 @@ function App() {
         console.log('Window shown');
       }
     };
-    
+
     initStore();
+  }, []);
+
+  // Disable the browser default context menu in production builds so
+  // vestiges like "Reload" and "Inspect Element" don't appear.
+  useEffect(() => {
+    if (!import.meta.env.DEV) {
+      const handler = (e: Event) => {
+        e.preventDefault();
+      };
+      window.addEventListener('contextmenu', handler);
+      return () => window.removeEventListener('contextmenu', handler);
+    }
+    return;
   }, []);
 
   // Save window state on resize/move with debouncing
   useEffect(() => {
     const appWindow = getCurrentWindow();
-    
+
     const saveWindowState = async () => {
       if (!store.current) return;
-      
+
       try {
         const position = await appWindow.outerPosition();
         const size = await appWindow.outerSize();
-        
+
         const windowState: WindowState = {
           x: position.x,
           y: position.y,
           width: size.width,
           height: size.height,
         };
-        
+
         console.log('Saving window state:', windowState);
         await store.current.set('windowState', windowState);
         await store.current.save();
@@ -208,17 +221,17 @@ function App() {
         console.error('Failed to save window state:', error);
       }
     };
-    
+
     const debouncedSave = () => {
       if (windowSaveTimeout.current) {
         clearTimeout(windowSaveTimeout.current);
       }
       windowSaveTimeout.current = window.setTimeout(saveWindowState, 500);
     };
-    
+
     const unlistenResize = appWindow.onResized(debouncedSave);
     const unlistenMove = appWindow.onMoved(debouncedSave);
-    
+
     return () => {
       unlistenResize.then(fn => fn());
       unlistenMove.then(fn => fn());
@@ -232,7 +245,7 @@ function App() {
   useEffect(() => {
     const appWindow = getCurrentWindow();
     let isProcessing = false;
-    
+
     const handleCloseRequested = async (event: any) => {
       // Prevent multiple simultaneous handlers
       if (isProcessing) {
@@ -280,7 +293,7 @@ function App() {
     };
 
     const unlisten = appWindow.onCloseRequested(handleCloseRequested);
-    
+
     return () => {
       unlisten.then(fn => fn());
     };
@@ -296,7 +309,7 @@ function App() {
       const unlistenPrint = await listen('menu-print', () => handlePrint());
       const unlistenSettings = await listen('menu-settings', () => setShowSettingsDialog(true));
       const unlistenQuit = await listen('menu-quit', () => handleQuit());
-      
+
       return () => {
         unlistenNew();
         unlistenOpen();
@@ -307,7 +320,7 @@ function App() {
         unlistenQuit();
       };
     };
-    
+
     setupMenuListeners();
   }, [document, currentFilePath, isDirty]);
 
@@ -348,7 +361,7 @@ function App() {
         filters: [{ name: "VCP Files", extensions: ["vcp"] }],
         defaultPath,
       });
-      
+
       if (filePath) {
         const doc = await invoke<VcpDocument>("open_file", { path: filePath });
         setDocument(doc);
@@ -368,23 +381,23 @@ function App() {
 
   const handleSave = async (): Promise<boolean> => {
     if (!document) return false;
-    
+
     try {
       let path = currentFilePath;
-      
+
       if (!path) {
         // Get smart default path for Save As
         const defaultPath = settings.files.vcpResourcesFolder || await homeDir();
-        
+
         const savePath = await save({
           filters: [{ name: "VCP Files", extensions: ["vcp"] }],
           defaultPath,
         });
-        
+
         if (!savePath) return false;
         path = savePath;
       }
-      
+
       await invoke("save_file_command", { path, doc: document });
       setCurrentFilePath(path);
       setIsDirty(false);
@@ -400,7 +413,7 @@ function App() {
 
   const handleSaveAs = async () => {
     if (!document) return;
-    
+
     try {
       // Get smart default path
       let defaultPath: string | undefined;
@@ -416,9 +429,9 @@ function App() {
         filters: [{ name: "VCP Files", extensions: ["vcp"] }],
         defaultPath,
       });
-      
+
       if (!savePath) return;
-      
+
       await invoke("save_file_command", { path: savePath, doc: document });
       setCurrentFilePath(savePath);
       setIsDirty(false);
@@ -458,7 +471,7 @@ function App() {
           return;
         }
       }
-      
+
       // result === 'discard' or save was successful, proceed with quit
       // Set isDirty to false so close handler allows it
       setIsDirty(false);
@@ -472,7 +485,7 @@ function App() {
   const handleSettingsSave = async (newSettings: AppSettings) => {
     setSettings(newSettings);
     setShowSettingsDialog(false);
-    
+
     // Save to store
     if (store.current) {
       try {
@@ -484,7 +497,7 @@ function App() {
         showNotification('Failed to save settings', 'error');
       }
     }
-    
+
     // Update undo manager max size if changed
     if (newSettings.editor.undoHistoryDepth !== settings.editor.undoHistoryDepth) {
       undoRedoManager.current = new UndoRedoManager(newSettings.editor.undoHistoryDepth);
@@ -531,36 +544,36 @@ function App() {
   // Check if a cell is occupied by a button or image
   const isCellOccupiedByElement = (row: number, col: number): boolean => {
     if (!document) return false;
-    
+
     // Check buttons
     for (const btn of document.buttons) {
       const rowSpan = btn.row_span || 1;
       const colSpan = btn.column_span || 1;
-      
+
       if (row >= btn.row && row < btn.row + rowSpan &&
-          col >= btn.column && col < btn.column + colSpan) {
+        col >= btn.column && col < btn.column + colSpan) {
         return true;
       }
     }
-    
+
     // Check images
     for (const img of document.images) {
       if (row >= img.row_start && row < img.row_start + img.row_span &&
-          col >= img.column_start && col < img.column_start + img.column_span) {
+        col >= img.column_start && col < img.column_start + img.column_span) {
         return true;
       }
     }
-    
+
     return false;
   };
 
   const handleAddBorder = () => {
     if (!document) return;
-    
+
     // Use selected cell position or default to (1,1)
     const startRow = selection?.row || 1;
     const startCol = selection?.column || 1;
-    
+
     const newBorder = {
       row_start: startRow,
       column_start: startCol,
@@ -570,14 +583,14 @@ function App() {
       outline_color: "#000000",
       outline_thickness: 2,
     };
-    
+
     const updatedDoc = {
       ...document,
       borders: [...document.borders, newBorder],
     };
-    
+
     updateDocument(updatedDoc);
-    
+
     // Select the new border
     setSelection({
       type: 'border',
@@ -589,17 +602,17 @@ function App() {
 
   const handleAddImage = () => {
     if (!document) return;
-    
+
     // Use selected cell position or default to (1,1)
     const startRow = selection?.row || 1;
     const startCol = selection?.column || 1;
-    
+
     // Check if the cell is already occupied by a button or image
     if (isCellOccupiedByElement(startRow, startCol)) {
       showNotification('Cannot add image: Cell is already occupied. Please select an empty cell or delete the existing element first.', 'warning');
       return;
     }
-    
+
     const newImage = {
       row_start: startRow,
       column_start: startCol,
@@ -607,14 +620,14 @@ function App() {
       column_span: 1,
       path: "",
     };
-    
+
     const updatedDoc = {
       ...document,
       images: [...document.images, newImage],
     };
-    
+
     updateDocument(updatedDoc);
-    
+
     // Select the new image
     setSelection({
       type: 'image',
@@ -626,11 +639,11 @@ function App() {
 
   const handleAddButton = () => {
     if (!document || !selection) return;
-    
+
     // Use selected cell position or default to (1,1)
     const buttonRow = selection.row || 1;
     const buttonColumn = selection.column || 1;
-    
+
     // Quick add: creates placeholder button (no XML file yet)
     const newButton = {
       row: buttonRow,
@@ -638,14 +651,14 @@ function App() {
       name: '',  // No name until configured in editor
       file: '',  // No XML file until user opens editor
     };
-    
+
     const updatedDoc = {
       ...document,
       buttons: [...document.buttons, newButton],
     };
-    
+
     updateDocument(updatedDoc);
-    
+
     // Select the new button
     setSelection({
       type: 'button',
@@ -673,7 +686,7 @@ function App() {
 
   const handleCut = () => {
     if (!document || !selection || selection.type === 'empty' || selection.index === undefined) return;
-    
+
     // Copy to clipboard
     let data = null;
     if (selection.type === 'border') {
@@ -683,10 +696,10 @@ function App() {
     } else if (selection.type === 'button') {
       data = { ...document.buttons[selection.index] };
     }
-    
+
     if (data) {
       setClipboard({ type: selection.type, data, isCut: true });
-      
+
       // Remove the element
       const updatedDoc = { ...document };
       if (selection.type === 'border') {
@@ -696,7 +709,7 @@ function App() {
       } else if (selection.type === 'button') {
         updatedDoc.buttons = document.buttons.filter((_, i) => i !== selection.index);
       }
-      
+
       updateDocument(updatedDoc);
       setSelection(null);
     }
@@ -704,7 +717,7 @@ function App() {
 
   const handleCopy = () => {
     if (!document || !selection || selection.type === 'empty' || selection.index === undefined) return;
-    
+
     let data = null;
     if (selection.type === 'border') {
       data = { ...document.borders[selection.index] };
@@ -713,7 +726,7 @@ function App() {
     } else if (selection.type === 'button') {
       data = { ...document.buttons[selection.index] };
     }
-    
+
     if (data) {
       setClipboard({ type: selection.type, data, isCut: false });
     }
@@ -721,14 +734,14 @@ function App() {
 
   const handlePaste = () => {
     if (!document || !clipboard) return;
-    
+
     // Use selected cell position or default to (1,1)
     const targetRow = selection?.row || 1;
     const targetCol = selection?.column || 1;
-    
+
     const updatedDoc = { ...document };
     let newIndex = -1;
-    
+
     if (clipboard.type === 'border') {
       const newBorder = {
         ...clipboard.data,
@@ -754,9 +767,9 @@ function App() {
       updatedDoc.buttons = [...document.buttons, newButton];
       newIndex = updatedDoc.buttons.length - 1;
     }
-    
+
     updateDocument(updatedDoc);
-    
+
     // Select the pasted element
     setSelection({
       type: clipboard.type,
@@ -764,7 +777,7 @@ function App() {
       row: targetRow,
       column: targetCol,
     });
-    
+
     // Clear clipboard if it was cut
     if (clipboard.isCut) {
       setClipboard(null);
@@ -773,7 +786,7 @@ function App() {
 
   const handleDelete = () => {
     if (!document || !selection || selection.type === 'empty' || selection.index === undefined) return;
-    
+
     const updatedDoc = { ...document };
     if (selection.type === 'border') {
       updatedDoc.borders = document.borders.filter((_, i) => i !== selection.index);
@@ -782,7 +795,7 @@ function App() {
     } else if (selection.type === 'button') {
       updatedDoc.buttons = document.buttons.filter((_, i) => i !== selection.index);
     }
-    
+
     updateDocument(updatedDoc);
     setSelection(null);
   };
@@ -793,10 +806,10 @@ function App() {
       // Ignore keyboard shortcuts when typing in an input or textarea
       const target = e.target as HTMLElement;
       const isTextInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-      
+
       // Check for Cmd (Mac) or Ctrl (Windows/Linux)
       const isMod = e.metaKey || e.ctrlKey;
-      
+
       if (isMod && e.key === 's') {
         // Cmd+S or Ctrl+S: Save
         e.preventDefault();
@@ -887,16 +900,16 @@ function App() {
                   name: buttonName,
                   file: `${buttonName}.xml`,
                 };
-                
+
                 const updatedDoc = {
                   ...document,
                   buttons: updatedButtons,
                 };
-                
+
                 // Save the document first
                 await invoke("save_file_command", { path: currentFilePath, doc: updatedDoc });
                 setIsDirty(false);
-                
+
                 // Now reload to get updated default_image field
                 const reloadedDoc = await invoke<VcpDocument>("open_file", { path: currentFilePath });
                 setDocument(reloadedDoc);
@@ -913,13 +926,13 @@ function App() {
           existingButton={
             selection && selection.type === 'button' && selection.index !== undefined && document
               ? (() => {
-                  const button = document.buttons[selection.index];
-                  // Only treat as existing button if it has a non-empty name and file
-                  // Empty placeholders should go through name entry workflow
-                  return button.name && button.name.trim() !== '' && button.file && button.file.trim() !== '' 
-                    ? { name: button.name, file: button.file }
-                    : undefined;
-                })()
+                const button = document.buttons[selection.index];
+                // Only treat as existing button if it has a non-empty name and file
+                // Empty placeholders should go through name entry workflow
+                return button.name && button.name.trim() !== '' && button.file && button.file.trim() !== ''
+                  ? { name: button.name, file: button.file }
+                  : undefined;
+              })()
               : undefined
           }
         />
@@ -949,7 +962,7 @@ function App() {
         canAddButton={selection !== null && selection.type === 'empty'}
       />
       <div className="main-container">
-        <div 
+        <div
           className="canvas-container"
           onClick={(e) => {
             // Deselect when clicking the canvas background (not the grid)
