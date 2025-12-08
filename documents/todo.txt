@@ -23,6 +23,7 @@ Remove vestiges of browser UI (Inspect Element, etc)
 Contextual menu:
 - Selected empty cell > Help, -, Border, Button, Image
 - ...
+
 Settings labels trigger a finger cursor but clicking does nothing
 Settings File "Default save location" should have a folder browser button
 Settings settings are typically auto-saved. Auto-save changes and remove "Save" button. Change "Cancel" button text to "Close"
