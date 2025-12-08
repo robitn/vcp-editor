@@ -41,13 +41,10 @@
     "macOS": {
       "minimumSystemVersion": "10.13"
     },
-    "windows": {
-      "iconPath": [
-        "icons/icon.ico"
-      ],
-      "wix": {
-        "language": "en-US"
+      "windows": {
+        "wix": {
+          "language": "en-US"
+        }
       }
-    }
   }
 }

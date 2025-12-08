@@ -1,8 +1,7 @@
-mod models;
-mod parser;
+mod backend;
 
-use models::VcpDocument;
-use parser::{load_file, save_file};
+use backend::models::VcpDocument;
+use backend::parser::{load_file, save_file};
 use std::sync::Mutex;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{Emitter, State};
