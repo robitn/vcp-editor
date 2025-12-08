@@ -159,6 +159,10 @@
     cursor: pointer;
 }
 
+.setting-row label.noninteractive {
+    cursor: default;
+}
+
 .setting-row input[type="checkbox"] {
     width: 18px;
     height: 18px;

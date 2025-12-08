@@ -14,48 +14,54 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
   const [activeTab, setActiveTab] = useState<SettingsTab>('grid');
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
 
-  const handleSave = () => {
-    onSave(localSettings);
-  };
+
 
   const updateGridSetting = <K extends keyof AppSettings['grid']>(
     key: K,
     value: AppSettings['grid'][K]
   ) => {
-    setLocalSettings({
+    const newSettings = {
       ...localSettings,
       grid: { ...localSettings.grid, [key]: value },
-    });
+    } as AppSettings;
+    setLocalSettings(newSettings);
+    onSave(newSettings);
   };
 
   const updateDisplaySetting = <K extends keyof AppSettings['display']>(
     key: K,
     value: AppSettings['display'][K]
   ) => {
-    setLocalSettings({
+    const newSettings = {
       ...localSettings,
       display: { ...localSettings.display, [key]: value },
-    });
+    } as AppSettings;
+    setLocalSettings(newSettings);
+    onSave(newSettings);
   };
 
   const updateEditorSetting = <K extends keyof AppSettings['editor']>(
     key: K,
     value: AppSettings['editor'][K]
   ) => {
-    setLocalSettings({
+    const newSettings = {
       ...localSettings,
       editor: { ...localSettings.editor, [key]: value },
-    });
+    } as AppSettings;
+    setLocalSettings(newSettings);
+    onSave(newSettings);
   };
 
   const updateFileSetting = <K extends keyof AppSettings['files']>(
     key: K,
     value: AppSettings['files'][K]
   ) => {
-    setLocalSettings({
+    const newSettings = {
       ...localSettings,
       files: { ...localSettings.files, [key]: value },
-    });
+    } as AppSettings;
+    setLocalSettings(newSettings);
+    onSave(newSettings);
   };
 
   return (
@@ -98,7 +104,7 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
             {activeTab === 'grid' && (
               <div className="settings-section">
                 <h3>Grid Settings</h3>
-                
+
                 <div className="setting-row">
                   <label>
                     <input
@@ -111,7 +117,7 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
                 </div>
 
                 <div className="setting-row">
-                  <label>Grid line style</label>
+                  <label className="noninteractive">Grid line style</label>
                   <select
                     value={localSettings.grid.gridLineStyle}
                     onChange={(e) => updateGridSetting('gridLineStyle', e.target.value as GridLineStyle)}
@@ -124,11 +130,11 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
                 </div>
 
                 <div className="setting-row">
-                  <label>Grid line color</label>
+                  <label className="noninteractive">Grid line color</label>
                   <input
                     type="color"
-                    value={localSettings.grid.gridLineColor.startsWith('rgba') 
-                      ? '#000000' 
+                    value={localSettings.grid.gridLineColor.startsWith('rgba')
+                      ? '#000000'
                       : localSettings.grid.gridLineColor}
                     onChange={(e) => updateGridSetting('gridLineColor', e.target.value)}
                     disabled={!localSettings.grid.showGridLines}
@@ -137,7 +143,7 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
                 </div>
 
                 <div className="setting-row">
-                  <label>Grid line thickness</label>
+                  <label className="noninteractive">Grid line thickness</label>
                   <input
                     type="range"
                     min="1"
@@ -151,7 +157,7 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
                 </div>
 
                 <div className="setting-row">
-                  <label>Cell zoom</label>
+                  <label className="noninteractive">Cell zoom</label>
                   <input
                     type="range"
                     min="50"
@@ -192,7 +198,7 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
                 </div>
 
                 <div className="setting-row">
-                  <label>Theme</label>
+                  <label className="noninteractive">Theme</label>
                   <select
                     value={localSettings.display.theme}
                     onChange={(e) => updateDisplaySetting('theme', e.target.value as ThemeMode)}
@@ -210,7 +216,7 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
                 <h3>Editor Settings</h3>
 
                 <div className="setting-row">
-                  <label>Undo history depth</label>
+                  <label className="noninteractive">Undo history depth</label>
                   <input
                     type="number"
                     min="5"
@@ -222,7 +228,7 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
                 </div>
 
                 <div className="setting-row">
-                  <label>Auto-save interval</label>
+                  <label className="noninteractive">Auto-save interval</label>
                   <select
                     value={localSettings.editor.autoSaveInterval}
                     onChange={(e) => updateEditorSetting('autoSaveInterval', parseInt(e.target.value))}
@@ -246,7 +252,7 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
                 </div>
 
                 <div className="setting-row">
-                  <label>External SVG Editor</label>
+                  <label className="noninteractive">External SVG Editor</label>
                   <div className="folder-input-group">
                     <input
                       type="text"
@@ -254,7 +260,7 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
                       onChange={(e) => updateEditorSetting('externalSvgEditor', e.target.value)}
                       placeholder="Path to SVG editor (e.g., /Applications/Inkscape.app)"
                     />
-                    <button 
+                    <button
                       className="folder-browse-button"
                       onClick={async () => {
                         const { open } = await import('@tauri-apps/plugin-dialog');
@@ -291,14 +297,38 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
                   </label>
                 </div>
 
+
                 <div className="setting-row">
-                  <label>Default save location</label>
-                  <input
-                    type="text"
-                    value={localSettings.files.defaultSaveLocation}
-                    onChange={(e) => updateFileSetting('defaultSaveLocation', e.target.value)}
-                    placeholder="Leave empty for system default"
-                  />
+                  <label className="noninteractive">Default save location</label>
+                  <div className="folder-input-group">
+                    <input
+                      type="text"
+                      value={localSettings.files.defaultSaveLocation}
+                      onChange={(e) => updateFileSetting('defaultSaveLocation', e.target.value)}
+                      placeholder="Leave empty for system default"
+                    />
+                    <button
+                      className="folder-browse-button"
+                      onClick={async () => {
+                        const { open } = await import('@tauri-apps/plugin-dialog');
+                        const { homeDir } = await import('@tauri-apps/api/path');
+
+                        const defaultPath = localSettings.files.defaultSaveLocation || await homeDir();
+
+                        const selected = await open({
+                          directory: true,
+                          multiple: false,
+                          title: 'Select Default Save Folder',
+                          defaultPath,
+                        });
+                        if (selected) {
+                          updateFileSetting('defaultSaveLocation', selected as string);
+                        }
+                      }}
+                    >
+                      Browse...
+                    </button>
+                  </div>
                 </div>
 
                 <div className="setting-row">
@@ -310,15 +340,15 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
                       onChange={(e) => updateFileSetting('vcpResourcesFolder', e.target.value)}
                       placeholder="Path to vcp folder (contains Buttons, Images, skins)"
                     />
-                    <button 
+                    <button
                       className="folder-browse-button"
                       onClick={async () => {
                         const { open } = await import('@tauri-apps/plugin-dialog');
                         const { homeDir } = await import('@tauri-apps/api/path');
-                        
+
                         // Use current setting or home directory as default
                         const defaultPath = localSettings.files.vcpResourcesFolder || await homeDir();
-                        
+
                         const selected = await open({
                           directory: true,
                           multiple: false,
@@ -326,7 +356,7 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
                           defaultPath,
                         });
                         if (selected) {
-                          updateFileSetting('vcpResourcesFolder', selected);
+                          updateFileSetting('vcpResourcesFolder', selected as string);
                         }
                       }}
                     >
@@ -342,10 +372,7 @@ export default function SettingsDialog({ settings, onSave, onCancel }: SettingsD
 
         <div className="settings-footer">
           <button className="settings-button settings-button-default" onClick={onCancel}>
-            Cancel
-          </button>
-          <button className="settings-button settings-button-primary" onClick={handleSave}>
-            Save
+            Close
           </button>
         </div>
       </div>
