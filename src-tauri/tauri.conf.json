@@ -14,7 +14,7 @@
       {
         "title": "Untitled",
         "width": 800,
-        "height": 600,
+        "height": 800,
         "visible": false
       }
     ],
@@ -41,10 +41,10 @@
     "macOS": {
       "minimumSystemVersion": "10.13"
     },
-      "windows": {
-        "wix": {
-          "language": "en-US"
-        }
+    "windows": {
+      "wix": {
+        "language": "en-US"
       }
+    }
   }
 }
