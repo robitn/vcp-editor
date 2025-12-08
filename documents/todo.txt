@@ -1,0 +1,40 @@
+✅ Add actual drag-and-drop functionality for repositioning elements
+✅ Implement Undo/Redo stack (5 levels as per spec)
+✅ Add toolbar buttons for creating new borders/images/buttons
+✅ Implement Cut/Copy/Paste operations
+✅ Add file browser dialog for image paths and button folders
+✅ Save Window size and position
+✅ Add keyboard shortcuts (Cmd+S for save, etc.)
+✅ Test with the sample VCP file provided
+✅ Add visual feedback for multi-cell drag selection
+✅ Implement element deletion
+✅ Add Print... to File menu to print VCP image via OS native print dialog
+✅ Add validation and error handling UI
+✅ Change window title to document <filename>
+✅ Change Application menu name to "VCP Editor"
+✅ Warn of unsaved changes, allow saving
+✅ Remember last file opened
+✅ Settings... UI/UX
+✅ Can Open dialog be clued where to open to based on context? Yes - uses last file dir, VCP resources folder, or home dir
+
+Remove vestiges of browser UI (Inspect Element, etc)
+- Right-click Contextual Menu contains Reload
+
+Contextual menu:
+- Selected empty cell > Help, -, Border, Button, Image
+- ...
+Settings labels trigger a finger cursor but clicking does nothing
+Settings File "Default save location" should have a folder browser button
+Settings settings are typically auto-saved
+Add attributions box to About box.
+
+Multi tab window.
+Add Open Recent > menuitem
+Because images and button may be created by an outside developer. A floating or fixed palette of images and buttons from a (root) folder. Drag-n-Drop.
+
+
+
+
+----
+NOTES:
+lsof -ti:1420 | xargs kill -9 2>/dev/null || echo "No process found on port 1420"

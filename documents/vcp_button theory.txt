@@ -1,0 +1,78 @@
+
+1. Button Creation Flow
+Add a button (Toolbar Button) to Grid
+    - In the Inspector Button tab, "New Button" button. (NEW)
+        - Button Editor Modal: Top-Left text-input and button: "Enter button name: |________| [OK]"
+        - the dialog expands (animates) to reveal remainder of dialog, 
+            - XML preview auto-populates with <vcp_button>... (more to follow)
+            - if SVG exists, render it; otherwise "Image Missing" placeholder
+
+2. Default Image Selection
+    - Browse starts in button's folder
+    - If file is outside button folder, copy it in and optionally rename to {buttonName}.svg
+    - If previous file was outside button folder, it's likely other are outside as well.
+
+3. Skin Events List
+    Snippet from PLC source code:
+        ;Maximum Number of Skin Events is 255
+
+        SkinSpinOverPlus_M            IS SV_SKIN_EVENT_1  ; Row  1 Column 1
+        SkinSpinAutoMan_M             IS SV_SKIN_EVENT_2  ; Row  1 Column 2
+        SkinAux1_M                    IS SV_SKIN_EVENT_3  ; Row  1 Column 3
+        SkinAux2_M                    IS SV_SKIN_EVENT_4  ; Row  1 Column 4
+
+    Ignore trailing comments; the trailing _M is an internal symbol
+
+3.1 plc_output 
+    plc_output -> number (LED number)
+    Snippet from PLC source code:
+        SpinOverPlusKey               IS INP1057  ; Row  1 Column 1
+        SpinAutoManKey                IS INP1058  ; Row  1 Column 2
+        Aux1Key                       IS INP1059  ; Row  1 Column 3
+        Aux2Key                       IS INP1060  ; Row  1 Column 4
+        Aux3Key                       IS INP1061  ; Row  1 Column 5
+
+        SpinOver100Key                IS INP1062  ; Row  2 Column 1
+        SpinCWKey                     IS INP1063  ; Row  2 Column 2
+        Aux4Key                       IS INP1064  ; Row  2 Column 3
+        Aux5Key                       IS INP1065  ; Row  2 Column 4
+        Aux6Key                       IS INP1066  ; Row  2 Column 5
+
+    I'll bet there's a regex to extract titleCase to space seperated words ;)
+
+4. External SVG Editor Setting
+    A Setting/Preference path to an external editor and a button in the Button-editor to pass button-name file to the SVG editor.
+    Good possibility button images will be created in a seperate operation. So minimal (?) support for SVG creation/editing in this iteration. (? = Let Claude decide.)
+
+5. XML Template for New Buttons
+    Option B: Sensible defaults
+
+6. Preview Canvas Size
+    Option B: Larger preview (240px × 240px)
+
+7. State Toggle Bar - Labels
+    I'm indecisive. Option A: Short labels for now. Font-based icons later.
+
+8. Save Behavior
+    b) Save XML + Update Skin
+        - feels more GUI.
+
+9. Button Naming Validation
+    We will auto-sanitize allowing a-z0-9_ real example: 4th_axis_clamp.*
+
+10. Right-Click Menu Context
+    Yes, this menu structure make sense.
+
+<vcp_button>
+  <skin_event_num>0</skin_event_num>
+  <plc_output>
+    <number>1</number>
+    <led_color_on>#00ff00</led_color_on>
+    <led_color_off>#ff0000</led_color_off>
+    <image_on>image_on.svg</image_on>
+    <image_off>image_off.svg</image_off>
+  </plc_output>
+</vcp_button>
+
+<color_on>#EC1C24</color_on>
+<color_off>#81151C</color_off>

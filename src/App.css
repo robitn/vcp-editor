@@ -1,0 +1,100 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+.app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.main-container {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.canvas-container {
+  flex: 1;
+  display: flex;
+  overflow: auto;
+}
+
+.inspector-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 18px;
+  color: #666;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .app {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+  }
+
+  .loading {
+    color: #999;
+  }
+}
+
+/* Print styles - only show the grid */
+@media print {
+
+  /* Hide everything except the grid */
+  .app>*:not(.main-container) {
+    display: none !important;
+  }
+
+  .inspector-container {
+    display: none !important;
+  }
+
+  /* Make canvas container take full page */
+  .app {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .main-container {
+    overflow: visible;
+  }
+
+  .canvas-container {
+    overflow: visible;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 0;
+  }
+
+  /* Ensure grid is visible and properly sized */
+  .vcp-grid {
+    page-break-inside: avoid;
+  }
+}
