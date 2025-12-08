@@ -1,0 +1,354 @@
+import { useState } from 'react';
+import './SettingsDialog.css';
+import { AppSettings, GridLineStyle, ThemeMode } from '../settingsTypes';
+
+interface SettingsDialogProps {
+  settings: AppSettings;
+  onSave: (settings: AppSettings) => void;
+  onCancel: () => void;
+}
+
+type SettingsTab = 'grid' | 'display' | 'editor' | 'files';
+
+export default function SettingsDialog({ settings, onSave, onCancel }: SettingsDialogProps) {
+  const [activeTab, setActiveTab] = useState<SettingsTab>('grid');
+  const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
+
+  const handleSave = () => {
+    onSave(localSettings);
+  };
+
+  const updateGridSetting = <K extends keyof AppSettings['grid']>(
+    key: K,
+    value: AppSettings['grid'][K]
+  ) => {
+    setLocalSettings({
+      ...localSettings,
+      grid: { ...localSettings.grid, [key]: value },
+    });
+  };
+
+  const updateDisplaySetting = <K extends keyof AppSettings['display']>(
+    key: K,
+    value: AppSettings['display'][K]
+  ) => {
+    setLocalSettings({
+      ...localSettings,
+      display: { ...localSettings.display, [key]: value },
+    });
+  };
+
+  const updateEditorSetting = <K extends keyof AppSettings['editor']>(
+    key: K,
+    value: AppSettings['editor'][K]
+  ) => {
+    setLocalSettings({
+      ...localSettings,
+      editor: { ...localSettings.editor, [key]: value },
+    });
+  };
+
+  const updateFileSetting = <K extends keyof AppSettings['files']>(
+    key: K,
+    value: AppSettings['files'][K]
+  ) => {
+    setLocalSettings({
+      ...localSettings,
+      files: { ...localSettings.files, [key]: value },
+    });
+  };
+
+  return (
+    <div className="settings-overlay" onClick={onCancel}>
+      <div className="settings-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="settings-header">
+          <h2>Settings</h2>
+          <button className="settings-close" onClick={onCancel}>×</button>
+        </div>
+
+        <div className="settings-content">
+          <div className="settings-tabs">
+            <button
+              className={`settings-tab ${activeTab === 'grid' ? 'active' : ''}`}
+              onClick={() => setActiveTab('grid')}
+            >
+              Grid
+            </button>
+            <button
+              className={`settings-tab ${activeTab === 'display' ? 'active' : ''}`}
+              onClick={() => setActiveTab('display')}
+            >
+              Display
+            </button>
+            <button
+              className={`settings-tab ${activeTab === 'editor' ? 'active' : ''}`}
+              onClick={() => setActiveTab('editor')}
+            >
+              Editor
+            </button>
+            <button
+              className={`settings-tab ${activeTab === 'files' ? 'active' : ''}`}
+              onClick={() => setActiveTab('files')}
+            >
+              Files
+            </button>
+          </div>
+
+          <div className="settings-panel">
+            {activeTab === 'grid' && (
+              <div className="settings-section">
+                <h3>Grid Settings</h3>
+                
+                <div className="setting-row">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={localSettings.grid.showGridLines}
+                      onChange={(e) => updateGridSetting('showGridLines', e.target.checked)}
+                    />
+                    Show grid lines
+                  </label>
+                </div>
+
+                <div className="setting-row">
+                  <label>Grid line style</label>
+                  <select
+                    value={localSettings.grid.gridLineStyle}
+                    onChange={(e) => updateGridSetting('gridLineStyle', e.target.value as GridLineStyle)}
+                    disabled={!localSettings.grid.showGridLines}
+                  >
+                    <option value="solid">Solid</option>
+                    <option value="dotted">Dotted</option>
+                    <option value="dashed">Dashed</option>
+                  </select>
+                </div>
+
+                <div className="setting-row">
+                  <label>Grid line color</label>
+                  <input
+                    type="color"
+                    value={localSettings.grid.gridLineColor.startsWith('rgba') 
+                      ? '#000000' 
+                      : localSettings.grid.gridLineColor}
+                    onChange={(e) => updateGridSetting('gridLineColor', e.target.value)}
+                    disabled={!localSettings.grid.showGridLines}
+                  />
+                  <span className="color-preview" style={{ backgroundColor: localSettings.grid.gridLineColor }}></span>
+                </div>
+
+                <div className="setting-row">
+                  <label>Grid line thickness</label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="3"
+                    step="1"
+                    value={localSettings.grid.gridLineThickness}
+                    onChange={(e) => updateGridSetting('gridLineThickness', parseInt(e.target.value))}
+                    disabled={!localSettings.grid.showGridLines}
+                  />
+                  <span className="range-value">{localSettings.grid.gridLineThickness}px</span>
+                </div>
+
+                <div className="setting-row">
+                  <label>Cell zoom</label>
+                  <input
+                    type="range"
+                    min="50"
+                    max="200"
+                    step="10"
+                    value={localSettings.grid.cellZoom}
+                    onChange={(e) => updateGridSetting('cellZoom', parseInt(e.target.value))}
+                  />
+                  <span className="range-value">{localSettings.grid.cellZoom}%</span>
+                </div>
+
+                <div className="setting-row">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={localSettings.grid.snapToGrid}
+                      onChange={(e) => updateGridSetting('snapToGrid', e.target.checked)}
+                    />
+                    Snap to grid
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'display' && (
+              <div className="settings-section">
+                <h3>Display Settings</h3>
+
+                <div className="setting-row">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={localSettings.display.showElementLabels}
+                      onChange={(e) => updateDisplaySetting('showElementLabels', e.target.checked)}
+                    />
+                    Show element labels/names
+                  </label>
+                </div>
+
+                <div className="setting-row">
+                  <label>Theme</label>
+                  <select
+                    value={localSettings.display.theme}
+                    onChange={(e) => updateDisplaySetting('theme', e.target.value as ThemeMode)}
+                  >
+                    <option value="system">System</option>
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'editor' && (
+              <div className="settings-section">
+                <h3>Editor Settings</h3>
+
+                <div className="setting-row">
+                  <label>Undo history depth</label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="50"
+                    value={localSettings.editor.undoHistoryDepth}
+                    onChange={(e) => updateEditorSetting('undoHistoryDepth', parseInt(e.target.value) || 5)}
+                  />
+                  <span className="help-text">Number of undo steps to remember (5-50)</span>
+                </div>
+
+                <div className="setting-row">
+                  <label>Auto-save interval</label>
+                  <select
+                    value={localSettings.editor.autoSaveInterval}
+                    onChange={(e) => updateEditorSetting('autoSaveInterval', parseInt(e.target.value))}
+                  >
+                    <option value="0">Off</option>
+                    <option value="1">1 minute</option>
+                    <option value="5">5 minutes</option>
+                    <option value="10">10 minutes</option>
+                  </select>
+                </div>
+
+                <div className="setting-row">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={localSettings.editor.confirmBeforeDelete}
+                      onChange={(e) => updateEditorSetting('confirmBeforeDelete', e.target.checked)}
+                    />
+                    Confirm before deleting elements
+                  </label>
+                </div>
+
+                <div className="setting-row">
+                  <label>External SVG Editor</label>
+                  <div className="folder-input-group">
+                    <input
+                      type="text"
+                      value={localSettings.editor.externalSvgEditor}
+                      onChange={(e) => updateEditorSetting('externalSvgEditor', e.target.value)}
+                      placeholder="Path to SVG editor (e.g., /Applications/Inkscape.app)"
+                    />
+                    <button 
+                      className="folder-browse-button"
+                      onClick={async () => {
+                        const { open } = await import('@tauri-apps/plugin-dialog');
+                        const selected = await open({
+                          directory: false,
+                          multiple: false,
+                          title: 'Select SVG Editor',
+                        });
+                        if (selected) {
+                          updateEditorSetting('externalSvgEditor', selected);
+                        }
+                      }}
+                    >
+                      Browse...
+                    </button>
+                  </div>
+                  <span className="help-text">Application to use for editing SVG button images</span>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'files' && (
+              <div className="settings-section">
+                <h3>File Settings</h3>
+
+                <div className="setting-row">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={localSettings.files.autoOpenLastFile}
+                      onChange={(e) => updateFileSetting('autoOpenLastFile', e.target.checked)}
+                    />
+                    Auto-open last file on startup
+                  </label>
+                </div>
+
+                <div className="setting-row">
+                  <label>Default save location</label>
+                  <input
+                    type="text"
+                    value={localSettings.files.defaultSaveLocation}
+                    onChange={(e) => updateFileSetting('defaultSaveLocation', e.target.value)}
+                    placeholder="Leave empty for system default"
+                  />
+                </div>
+
+                <div className="setting-row">
+                  <label>VCP resources folder</label>
+                  <div className="folder-input-group">
+                    <input
+                      type="text"
+                      value={localSettings.files.vcpResourcesFolder}
+                      onChange={(e) => updateFileSetting('vcpResourcesFolder', e.target.value)}
+                      placeholder="Path to vcp folder (contains Buttons, Images, skins)"
+                    />
+                    <button 
+                      className="folder-browse-button"
+                      onClick={async () => {
+                        const { open } = await import('@tauri-apps/plugin-dialog');
+                        const { homeDir } = await import('@tauri-apps/api/path');
+                        
+                        // Use current setting or home directory as default
+                        const defaultPath = localSettings.files.vcpResourcesFolder || await homeDir();
+                        
+                        const selected = await open({
+                          directory: true,
+                          multiple: false,
+                          title: 'Select VCP Resources Folder',
+                          defaultPath,
+                        });
+                        if (selected) {
+                          updateFileSetting('vcpResourcesFolder', selected);
+                        }
+                      }}
+                    >
+                      Browse...
+                    </button>
+                  </div>
+                  <span className="help-text">Root folder containing Buttons, Images, and VCP skins subdirectories</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="settings-footer">
+          <button className="settings-button settings-button-default" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="settings-button settings-button-primary" onClick={handleSave}>
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
