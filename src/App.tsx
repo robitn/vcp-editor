@@ -6,6 +6,7 @@ import { getCurrentWindow, LogicalPosition, LogicalSize } from "@tauri-apps/api/
 import { dirname, homeDir, join } from "@tauri-apps/api/path";
 import { listen } from "@tauri-apps/api/event";
 import "./App.css";
+import "./components/AboutDialog.css";
 import { VcpDocument, Selection } from "./types";
 import VcpGrid from "./components/VcpGrid";
 import Inspector from "./components/Inspector";
@@ -342,6 +343,21 @@ function App() {
 
     setupMenuListeners();
   }, [document, currentFilePath, isDirty]);
+
+  // Apply theme setting to document root
+  useEffect(() => {
+    const root = window.document.documentElement;
+
+    // Remove any existing theme classes
+    root.classList.remove('theme-light', 'theme-dark');
+
+    if (settings.display.theme === 'light') {
+      root.classList.add('theme-light');
+    } else if (settings.display.theme === 'dark') {
+      root.classList.add('theme-dark');
+    }
+    // If 'system', don't add any class (let CSS media query handle it)
+  }, [settings.display.theme]);
 
   // About dialog close handler
   const handleCloseAbout = () => {
@@ -686,11 +702,17 @@ function App() {
     const startRow = selection?.row || 1;
     const startCol = selection?.column || 1;
 
+    // Smart sizing: ensure border fits within grid bounds
+    const maxRowSpan = document.row_count - startRow + 1;
+    const maxColSpan = document.column_count - startCol + 1;
+    const rowSpan = Math.min(2, maxRowSpan);
+    const colSpan = Math.min(2, maxColSpan);
+
     const newBorder = {
       row_start: startRow,
       column_start: startCol,
-      row_span: 2,
-      column_span: 2,
+      row_span: rowSpan,
+      column_span: colSpan,
       fill: "Transparent",
       outline_color: "#000000",
       outline_thickness: 2,
@@ -1104,6 +1126,14 @@ function App() {
             gridSettings={settings.grid}
             vcpResourcesFolder={settings.files.vcpResourcesFolder}
             imageCacheBuster={imageCacheBuster}
+            onAddBorder={handleAddBorder}
+            onAddImage={handleAddImage}
+            onAddButton={handleAddButton}
+            onCut={handleCut}
+            onCopy={handleCopy}
+            onPaste={handlePaste}
+            onDelete={handleDelete}
+            canPaste={clipboard !== null}
           />
         </div>
         <div className="inspector-container">

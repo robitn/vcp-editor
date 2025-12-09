@@ -12,6 +12,14 @@ interface VcpGridProps {
   gridSettings: GridSettings;
   vcpResourcesFolder: string;
   imageCacheBuster: number;
+  onAddBorder?: () => void;
+  onAddImage?: () => void;
+  onAddButton?: () => void;
+  onCut?: () => void;
+  onCopy?: () => void;
+  onPaste?: () => void;
+  onDelete?: () => void;
+  canPaste?: boolean;
 }
 
 // const CELL_SIZE = 120; // Unused, kept for reference
@@ -26,6 +34,14 @@ const VcpGrid: React.FC<VcpGridProps> = ({
   gridSettings,
   vcpResourcesFolder,
   imageCacheBuster,
+  onAddBorder,
+  onAddImage,
+  onAddButton,
+  onCut,
+  onCopy,
+  onPaste,
+  onDelete,
+  canPaste = false,
 }) => {
   // Calculate cell size based on zoom
   const CELL_SIZE = Math.round(120 * (gridSettings.cellZoom / 100));
@@ -38,6 +54,7 @@ const VcpGrid: React.FC<VcpGridProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
   const [resizeStart, setResizeStart] = useState<{ row: number; col: number; rowSpan: number; colSpan: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; selection: Selection | null } | null>(null);
 
   const gridWidth = document.column_count * (CELL_SIZE + CELL_SPACING) - CELL_SPACING;
   const gridHeight = document.row_count * (CELL_SIZE + CELL_SPACING) - CELL_SPACING;
@@ -612,7 +629,7 @@ const VcpGrid: React.FC<VcpGridProps> = ({
                 console.error('Failed to load image:', imageName, 'path:', imageSrc);
 
                 // Check file validity
-                  try {
+                try {
                   const { invoke } = await import('@tauri-apps/api/core');
                   await invoke<string>('check_svg_file', { filePath: fullPath });
                 } catch (err) {
@@ -911,6 +928,56 @@ const VcpGrid: React.FC<VcpGridProps> = ({
     );
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left - OUTER_MARGIN;
+    const y = e.clientY - rect.top - OUTER_MARGIN;
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      selection: selection,
+    });
+  };
+
+  const handleContextMenuAction = (action: string) => {
+    setContextMenu(null);
+
+    switch (action) {
+      case 'add-border':
+        onAddBorder?.();
+        break;
+      case 'add-image':
+        onAddImage?.();
+        break;
+      case 'add-button':
+        onAddButton?.();
+        break;
+      case 'cut':
+        onCut?.();
+        break;
+      case 'copy':
+        onCopy?.();
+        break;
+      case 'paste':
+        onPaste?.();
+        break;
+      case 'delete':
+        onDelete?.();
+        break;
+    }
+  };
+
+  // Close context menu when clicking elsewhere
+  React.useEffect(() => {
+    if (contextMenu) {
+      const handleClick = () => setContextMenu(null);
+      window.addEventListener('click', handleClick);
+      return () => window.removeEventListener('click', handleClick);
+    }
+  }, [contextMenu]);
+
   return (
     <div className="vcp-grid-container">
       <div
@@ -924,6 +991,7 @@ const VcpGrid: React.FC<VcpGridProps> = ({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onContextMenu={handleContextMenu}
       >
         <div
           className="grid-content"
@@ -943,6 +1011,63 @@ const VcpGrid: React.FC<VcpGridProps> = ({
           {renderResizeHandles()}
         </div>
       </div>
+      {contextMenu && (
+        <div
+          className="context-menu"
+          style={{
+            position: 'fixed',
+            left: contextMenu.x,
+            top: contextMenu.y,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenu.selection?.type === 'empty' ? (
+            <>
+              <button className="context-menu-item" onClick={() => handleContextMenuAction('add-border')}>
+                Border
+              </button>
+              <button className="context-menu-item" onClick={() => handleContextMenuAction('add-image')}>
+                Image
+              </button>
+              <button className="context-menu-item" onClick={() => handleContextMenuAction('add-button')}>
+                Button
+              </button>
+              <div className="context-menu-separator" />
+              <button
+                className="context-menu-item"
+                onClick={() => handleContextMenuAction('paste')}
+                disabled={!canPaste}
+              >
+                Paste
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="context-menu-item" onClick={() => handleContextMenuAction('add-border')}>
+                Border
+              </button>
+              <div className="context-menu-separator" />
+              <button className="context-menu-item" onClick={() => handleContextMenuAction('cut')}>
+                Cut
+              </button>
+              <button className="context-menu-item" onClick={() => handleContextMenuAction('copy')}>
+                Copy
+              </button>
+              <button
+                className="context-menu-item"
+                onClick={() => handleContextMenuAction('paste')}
+                disabled={true}
+              >
+                Paste
+              </button>
+              <div className="context-menu-separator" />
+              <button className="context-menu-item" onClick={() => handleContextMenuAction('delete')}>
+                Delete
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };

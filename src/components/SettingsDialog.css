@@ -426,3 +426,239 @@
         box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.4);
     }
 }
+
+/* Manual light theme override - forces light mode even if OS is in dark mode */
+.theme-light .settings-overlay {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.theme-light .settings-dialog {
+    background-color: #ffffff;
+    border-color: #ddd;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.theme-light .settings-header {
+    background-color: #f8f8f8;
+    border-bottom-color: #ddd;
+}
+
+.theme-light .settings-header h2,
+.theme-light .settings-close {
+    color: #000;
+}
+
+.theme-light .settings-close:hover {
+    background-color: #e9e9e9;
+}
+
+.theme-light .settings-tabs {
+    background-color: #f5f5f5;
+    border-bottom-color: #ddd;
+}
+
+.theme-light .settings-tab {
+    color: #555;
+}
+
+.theme-light .settings-tab:hover {
+    background-color: #e9e9e9;
+}
+
+.theme-light .settings-tab.active {
+    background-color: #fff;
+    border-bottom-color: #007bff;
+    color: #000;
+}
+
+.theme-light .settings-section h3 {
+    color: #333;
+}
+
+.theme-light .setting-row>label:first-child,
+.theme-light .setting-row label {
+    color: #555;
+}
+
+.theme-light .setting-row input[type="text"],
+.theme-light .setting-row input[type="number"],
+.theme-light .setting-row select,
+.theme-light .setting-row textarea {
+    background-color: #fff;
+    border-color: #ccc;
+    color: #000;
+}
+
+.theme-light .setting-row input:focus,
+.theme-light .setting-row select:focus,
+.theme-light .setting-row textarea:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+}
+
+.theme-light .setting-row input[type="checkbox"] {
+    border-color: #ccc;
+    background-color: #fff;
+}
+
+.theme-light .setting-row input[type="checkbox"]:checked {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.theme-light .browse-folder-btn {
+    background-color: #f0f0f0;
+    color: #333;
+    border-color: #ccc;
+}
+
+.theme-light .browse-folder-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.theme-light .settings-footer {
+    background-color: #f8f8f8;
+    border-top-color: #ddd;
+}
+
+.theme-light .settings-button {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.theme-light .settings-button:hover {
+    background-color: #0056b3;
+}
+
+.theme-light .settings-button.cancel {
+    background-color: #6c757d;
+}
+
+.theme-light .settings-button.cancel:hover {
+    background-color: #5a6268;
+}
+
+/* Manual dark theme override */
+.theme-dark .settings-overlay {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.theme-dark .settings-dialog {
+    background-color: #2a2a2a;
+    border-color: #444;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+}
+
+.theme-dark .settings-header {
+    border-bottom-color: #444;
+}
+
+.theme-dark .settings-header h2 {
+    color: #fff;
+}
+
+.theme-dark .settings-close {
+    color: #ccc;
+}
+
+.theme-dark .settings-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.theme-dark .settings-tabs {
+    background-color: #2d2d2d;
+    border-right-color: #444;
+}
+
+.theme-dark .settings-tab {
+    color: #ccc;
+}
+
+.theme-dark .settings-tab:hover {
+    background-color: #3a3a3a;
+    color: #fff;
+}
+
+.theme-dark .settings-tab.active {
+    background-color: #1e1e1e;
+    color: #0066cc;
+    border-left-color: #0066cc;
+}
+
+.theme-dark .settings-section h3 {
+    color: #fff;
+    border-bottom-color: #444;
+}
+
+.theme-dark .setting-row>label:first-child {
+    color: #ccc;
+}
+
+.theme-dark .setting-row label {
+    color: #ccc;
+}
+
+.theme-dark .setting-row input[type="text"],
+.theme-dark .setting-row input[type="number"],
+.theme-dark .setting-row select {
+    background-color: #3e3e3e;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+.theme-dark .setting-row input[type="text"]:focus,
+.theme-dark .setting-row input[type="number"]:focus,
+.theme-dark .setting-row select:focus {
+    border-color: #0066cc;
+    box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.3);
+}
+
+.theme-dark .setting-row input[type="color"] {
+    background-color: #3e3e3e;
+    border-color: #555;
+}
+
+.theme-dark .folder-browse-button {
+    background-color: #3e3e3e;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+.theme-dark .folder-browse-button:hover {
+    background-color: #4e4e4e;
+}
+
+.theme-dark .folder-browse-button:active {
+    background-color: #2e2e2e;
+}
+
+.theme-dark .color-preview {
+    border-color: #555;
+}
+
+.theme-dark .range-value {
+    color: #999;
+}
+
+.theme-dark .help-text {
+    color: #888;
+}
+
+.theme-dark .settings-footer {
+    border-top-color: #444;
+}
+
+.theme-dark .settings-button-default {
+    background-color: #3e3e3e;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+.theme-dark .settings-button-default:hover {
+    background-color: #4a4a4a;
+}
+
+.theme-dark .settings-button:focus {
+    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.4);
+}

@@ -50,7 +50,7 @@
   color: #666;
 }
 
-/* Dark mode */
+/* Dark mode - either from system preference or manual theme setting */
 @media (prefers-color-scheme: dark) {
   .app {
     background-color: #1e1e1e;
@@ -60,6 +60,109 @@
   .loading {
     color: #999;
   }
+}
+
+/* Manual theme overrides - these take precedence over system preference */
+.theme-light .app {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.theme-light .loading {
+  color: #666;
+}
+
+.theme-dark .app {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+}
+
+.theme-dark .loading {
+  color: #999;
+}
+
+/* Light theme overrides - add after existing .theme-light rules around line 800 */
+.theme-light .button-editor-overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.theme-light .button-editor-modal {
+  background-color: #ffffff;
+  color: #000000;
+  border: 1px solid #d0d0d0;
+}
+
+.theme-light .button-editor-header,
+.theme-light .button-editor-footer {
+  background-color: #f5f5f5;
+  border-color: #d0d0d0;
+}
+
+.theme-light .button-editor-content {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.theme-light .editor-section {
+  background-color: #fafafa;
+  border-color: #e0e0e0;
+}
+
+.theme-light .editor-section h3 {
+  color: #333333;
+  border-bottom-color: #d0d0d0;
+}
+
+.theme-light input[type="text"],
+.theme-light input[type="number"],
+.theme-light textarea,
+.theme-light select {
+  background-color: #ffffff;
+  color: #000000;
+  border-color: #cccccc;
+}
+
+.theme-light input[type="text"]:focus,
+.theme-light input[type="number"]:focus,
+.theme-light textarea:focus,
+.theme-light select:focus {
+  border-color: #007acc;
+  background-color: #ffffff;
+}
+
+.theme-light button {
+  background-color: #f0f0f0;
+  color: #000000;
+  border-color: #cccccc;
+}
+
+.theme-light button:hover {
+  background-color: #e0e0e0;
+}
+
+.theme-light button.primary {
+  background-color: #007acc;
+  color: #ffffff;
+}
+
+.theme-light button.primary:hover {
+  background-color: #005a9e;
+}
+
+.theme-light .image-preview,
+.theme-light .button-preview {
+  background-color: #f9f9f9;
+  border-color: #d0d0d0;
+}
+
+.theme-light .plc-type-toggle button {
+  background-color: #e8e8e8;
+  color: #666666;
+}
+
+.theme-light .plc-type-toggle button.active {
+  background-color: #007acc;
+  color: #ffffff;
 }
 
 /* Print styles - only show the grid */
