@@ -20,12 +20,12 @@
 ✅ Settings labels trigger a finger cursor but clicking does nothing
 ✅ Settings File "Default save location" should have a folder browser button
 ✅ Settings settings are typically auto-saved. Auto-save changes and remove "Save" button. Change "Cancel" button text to "Close"
+✅ Add (empty, but developer editable) "attributions" box to About box.
+✅Contextual menus:
+    - Selected empty cell > Border, Button, Image
+    - Select occupied cell > Border, -, Cut, Copy, Paste, Delete
 
-Add (empty, but developer editable) "attributions" box to About box.
-
-Contextual menu:
-- Selected empty cell > Border, Button, Image
-- Select occupied cell > Border, -, Cut, Copy, Paste, Delete
+It's become difficult to select the border for editing.
 
 Remove vestiges of browser UI (Inspect Element, etc)
 - example: Right-click Contextual Menu contains Reload
@@ -38,5 +38,5 @@ Because images and buttons may be created by an outside developer. A floating or
 
 
 ----
-NOTES:
+Terminal:
 lsof -ti:1420 | xargs kill -9 2>/dev/null || echo "No process found on port 1420"

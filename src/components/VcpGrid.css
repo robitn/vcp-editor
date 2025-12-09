@@ -355,3 +355,276 @@
     transform: scale(1.3);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
+
+/* Manual light theme override - forces light mode even if OS is in dark mode */
+.theme-light .vcp-grid-container {
+    background-color: #f0f0f0;
+}
+
+.theme-light .vcp-grid {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .grid-cell {
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .grid-cell.selected {
+    border-color: #007bff;
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.theme-light .grid-border:hover {
+    outline: 2px solid rgba(0, 123, 255, 0.5);
+}
+
+.theme-light .grid-border.selected {
+    outline: 2px solid #007bff;
+}
+
+.theme-light .grid-border-edge:hover {
+    background-color: rgba(0, 123, 255, 0.2);
+}
+
+.theme-light .grid-image:hover {
+    outline: 2px solid rgba(0, 123, 255, 0.5);
+}
+
+.theme-light .grid-image.selected {
+    outline: 2px solid #007bff;
+}
+
+.theme-light .image-placeholder {
+    background-color: #e0e0e0;
+    border-color: #ccc;
+    color: #666;
+}
+
+.theme-light .grid-button {
+    background-color: #fff;
+    border-color: #ddd;
+}
+
+.theme-light .grid-button:hover {
+    outline: 2px solid rgba(0, 123, 255, 0.5);
+    background-color: #f8f8f8;
+}
+
+.theme-light .grid-button.selected {
+    outline: 2px solid #007bff;
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.theme-light .button-label {
+    color: #333;
+}
+
+.theme-light .drag-preview.valid {
+    background-color: rgba(0, 255, 0, 0.1);
+    border-color: #00cc00;
+}
+
+.theme-light .drag-preview.occupied {
+    background-color: rgba(255, 0, 0, 0.1);
+    border-color: #cc0000;
+}
+
+/* Manual dark theme override */
+.theme-dark .vcp-grid-container {
+    background-color: #1e1e1e;
+}
+
+.theme-dark .vcp-grid {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.theme-dark .grid-cell {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .grid-cell.selected {
+    border-color: #0066cc;
+    background-color: rgba(0, 102, 204, 0.2);
+}
+
+.theme-dark .grid-border:hover {
+    box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.5);
+}
+
+.theme-dark .grid-border.selected {
+    box-shadow: 0 0 0 3px #0066cc;
+}
+
+.theme-dark .grid-border-edge:hover {
+    background: rgba(0, 102, 204, 0.2);
+}
+
+.theme-dark .grid-image:hover {
+    box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.5);
+}
+
+.theme-dark .grid-image.selected {
+    box-shadow: 0 0 0 3px #0066cc;
+}
+
+.theme-dark .image-placeholder {
+    background-color: rgba(100, 100, 100, 0.3);
+    border-color: #666;
+    color: #999;
+}
+
+.theme-dark .grid-button {
+    background-color: #3e3e3e;
+    border-color: #666;
+}
+
+.theme-dark .grid-button:hover {
+    background-color: #4a4a4a;
+    box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.5);
+}
+
+.theme-dark .grid-button.selected {
+    border-color: #0066cc;
+    background-color: #2d4a66;
+    box-shadow: 0 0 0 3px #0066cc;
+}
+
+.theme-dark .button-label {
+    color: #e0e0e0;
+}
+
+.theme-dark .drag-preview.valid {
+    background-color: rgba(0, 102, 204, 0.3);
+    border-color: #0066cc;
+    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.2);
+}
+
+.theme-dark .drag-preview.occupied {
+    background-color: rgba(204, 0, 0, 0.2);
+    border-color: #cc0000;
+    box-shadow: 0 0 0 4px rgba(204, 0, 0, 0.15);
+}
+
+.theme-dark .resize-dimensions {
+    background-color: rgba(0, 102, 204, 0.95);
+}
+
+.theme-dark .resize-handle {
+    background-color: #0066cc;
+    border-color: #2d2d2d;
+}
+
+.theme-dark .resize-handle:hover {
+    background-color: #0052a3;
+}
+
+/* Context Menu Styles */
+.context-menu {
+    position: fixed;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    padding: 4px 0;
+    z-index: 10000;
+    min-width: 150px;
+}
+
+.context-menu-item {
+    display: block;
+    width: 100%;
+    padding: 6px 16px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+    transition: background-color 0.15s ease;
+}
+
+.context-menu-item:hover:not(:disabled) {
+    background-color: #f0f0f0;
+}
+
+.context-menu-item:disabled {
+    color: #999;
+    cursor: not-allowed;
+}
+
+.context-menu-separator {
+    height: 1px;
+    background-color: #e0e0e0;
+    margin: 4px 0;
+}
+
+/* Dark theme for context menu */
+@media (prefers-color-scheme: dark) {
+    .context-menu {
+        background-color: #2d2d2d;
+        border-color: #555;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .context-menu-item {
+        color: #FFF;
+    }
+
+    .context-menu-item:hover:not(:disabled) {
+        background-color: #3d3d3d;
+    }
+
+    .context-menu-item:disabled {
+        color: #666;
+    }
+
+    .context-menu-separator {
+        background-color: #555;
+    }
+}
+
+/* Light theme override for context menu */
+.theme-light .context-menu {
+    background-color: white;
+    border-color: #ccc;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.theme-light .context-menu-item {
+    color: #333;
+}
+
+.theme-light .context-menu-item:hover:not(:disabled) {
+    background-color: #f0f0f0;
+}
+
+.theme-light .context-menu-item:disabled {
+    color: #999;
+}
+
+.theme-light .context-menu-separator {
+    background-color: #e0e0e0;
+}
+
+/* Dark theme override for context menu */
+.theme-dark .context-menu {
+    background-color: #2d2d2d;
+    border-color: #555;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.theme-dark .context-menu-item {
+    color: #e0e0e0;
+}
+
+.theme-dark .context-menu-item:hover:not(:disabled) {
+    background-color: #3d3d3d;
+}
+
+.theme-dark .context-menu-item:disabled {
+    color: #666;
+}
+
+.theme-dark .context-menu-separator {
+    background-color: #555;
+}

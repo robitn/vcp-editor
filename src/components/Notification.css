@@ -143,3 +143,69 @@
         background-color: rgba(255, 255, 255, 0.1);
     }
 }
+
+/* Manual light theme override - forces light mode even if OS is in dark mode */
+.theme-light .notification {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.theme-light .notification-error {
+    background-color: #fee;
+    border-left-color: #dc3545;
+    color: #721c24;
+}
+
+.theme-light .notification-warning {
+    background-color: #fff3cd;
+    border-left-color: #ffc107;
+    color: #856404;
+}
+
+.theme-light .notification-success {
+    background-color: #d4edda;
+    border-left-color: #28a745;
+    color: #155724;
+}
+
+.theme-light .notification-info {
+    background-color: #d1ecf1;
+    border-left-color: #17a2b8;
+    color: #0c5460;
+}
+
+.theme-light .notification-close:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Manual dark theme override */
+.theme-dark .notification {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.theme-dark .notification-error {
+    background-color: #3a1f1f;
+    border-left-color: #cc2936;
+    color: #ffb3ba;
+}
+
+.theme-dark .notification-warning {
+    background-color: #3a3320;
+    border-left-color: #d4a017;
+    color: #ffe4a0;
+}
+
+.theme-dark .notification-success {
+    background-color: #1f3a27;
+    border-left-color: #2ecc71;
+    color: #a0ffb3;
+}
+
+.theme-dark .notification-info {
+    background-color: #1f2f3a;
+    border-left-color: #17a2b8;
+    color: #a0e4ff;
+}
+
+.theme-dark .notification-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
