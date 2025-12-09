@@ -16,23 +16,23 @@
 ✅ Remember last file opened
 ✅ Settings... UI/UX
 ✅ Can Open dialog be clued where to open to based on context? Yes - uses last file dir, VCP resources folder, or home dir
+✅ the save-folder location should honor the folder structure: (save-folder) -> skins, (save-folder) -> images, (save-folder) -> Buttons, (save-folder) -> Buttons -> [button-folders].
+✅ Settings labels trigger a finger cursor but clicking does nothing
+✅ Settings File "Default save location" should have a folder browser button
+✅ Settings settings are typically auto-saved. Auto-save changes and remove "Save" button. Change "Cancel" button text to "Close"
+
+Add (empty, but developer editable) "attributions" box to About box.
+
+Contextual menu:
+- Selected empty cell > Border, Button, Image
+- Select occupied cell > Border, -, Cut, Copy, Paste, Delete
 
 Remove vestiges of browser UI (Inspect Element, etc)
 - example: Right-click Contextual Menu contains Reload
 
-Contextual menu:
-- Selected empty cell > Help, -, Border, Button, Image
-- ...
-
-Settings labels trigger a finger cursor but clicking does nothing
-Settings File "Default save location" should have a folder browser button
-Settings settings are typically auto-saved. Auto-save changes and remove "Save" button. Change "Cancel" button text to "Close"
-Add (empty, but developer editable) "attributions" box to About box.
-
-
 Multi tab window.
 Add Open Recent > menuitem
-Because images and button may be created by an outside developer. A floating or fixed palette of images and buttons from a (root) folder. Drag-n-Drop.
+Because images and buttons may be created by an outside developer. A floating or fixed palette of images and buttons from a (root) folder. Drag-n-Drop.
 
 
 

@@ -33,6 +33,7 @@ export interface AppSettings {
   display: DisplaySettings;
   editor: EditorSettings;
   files: FileSettings;
+  attributions?: string[]; // Developer-editable list of attributions shown in About box
 }
 
 export const defaultSettings: AppSettings = {
@@ -59,4 +60,5 @@ export const defaultSettings: AppSettings = {
     defaultSaveLocation: '',
     vcpResourcesFolder: '',
   },
+  attributions: [],
 };

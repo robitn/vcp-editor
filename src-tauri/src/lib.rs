@@ -69,6 +69,87 @@ fn create_button_folder(vcp_resources_folder: String, button_name: String) -> Re
 }
 
 #[tauri::command]
+fn ensure_vcp_folder_structure(base_path: String) -> Result<(), String> {
+    use std::fs;
+    use std::path::Path;
+    
+    let folders = vec!["skins", "images", "Buttons"];
+    
+    for folder in folders {
+        let folder_path = format!("{}/{}", base_path, folder);
+        let path = Path::new(&folder_path);
+        
+        if !path.exists() {
+            fs::create_dir_all(path)
+                .map_err(|e| format!("Failed to create {} folder: {}", folder, e))?;
+        }
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
+fn export_to_cnc(default_save_location: String, _vcp_resources_folder: String, output_path: String) -> Result<(), String> {
+    use std::fs;
+    use std::path::Path;
+    use std::io::{Write, Read};
+    use zip::write::FileOptions;
+    use zip::ZipWriter;
+    
+    let base_path = Path::new(&default_save_location);
+    
+    // Get the folder name to use as zip root
+    let folder_name = base_path.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("vcp-export");
+    
+    // Create zip file
+    let file = fs::File::create(&output_path)
+        .map_err(|e| format!("Failed to create zip file: {}", e))?;
+    let mut zip = ZipWriter::new(file);
+    let options = FileOptions::<()>::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+    
+    // Walk the entire defaultSaveLocation folder recursively
+    let walker = walkdir::WalkDir::new(base_path)
+        .into_iter()
+        .filter_map(|e| e.ok());
+    
+    for entry in walker {
+        let path = entry.path();
+        
+        // Skip the root directory itself
+        if path == base_path {
+            continue;
+        }
+        
+        if path.is_file() {
+            // Get relative path from base_path
+            let name = path.strip_prefix(base_path)
+                .map_err(|e| format!("Path strip error: {}", e))?;
+            
+            // Build zip path with folder name prefix
+            let zip_path = format!("{}/{}", folder_name, name.to_string_lossy());
+            
+            // Add file to zip
+            zip.start_file(&zip_path, options)
+                .map_err(|e| format!("Failed to add file to zip: {}", e))?;
+            
+            let mut file_data = fs::File::open(path)
+                .map_err(|e| format!("Failed to open file: {}", e))?;
+            let mut buffer = Vec::new();
+            file_data.read_to_end(&mut buffer)
+                .map_err(|e| format!("Failed to read file: {}", e))?;
+            zip.write_all(&buffer)
+                .map_err(|e| format!("Failed to write to zip: {}", e))?;
+        }
+    }
+    
+    zip.finish().map_err(|e| format!("Failed to finalize zip: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
 fn save_button_xml(button_folder: String, button_name: String, xml_content: String) -> Result<(), String> {
     use std::fs;
     
@@ -172,6 +253,7 @@ pub fn run() {
             let open_item = MenuItem::with_id(app, "open", "Open...", true, Some("CmdOrCtrl+O"))?;
             let save_item = MenuItem::with_id(app, "save", "Save", true, Some("CmdOrCtrl+S"))?;
             let save_as_item = MenuItem::with_id(app, "save_as", "Save As...", true, Some("CmdOrCtrl+Shift+S"))?;
+            let export_item = MenuItem::with_id(app, "export_cnc", "Export to CNC...", true, None::<&str>)?;
             let print_item = MenuItem::with_id(app, "print", "Print...", true, Some("CmdOrCtrl+P"))?;
             let settings_item = MenuItem::with_id(app, "settings", "Settings...", true, Some("CmdOrCtrl+,"))?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit VCP Editor", true, Some("CmdOrCtrl+Q"))?;
@@ -230,6 +312,8 @@ pub fn run() {
                         &save_item,
                         &save_as_item,
                         &PredefinedMenuItem::separator(app)?,
+                        &export_item,
+                        &PredefinedMenuItem::separator(app)?,
                         &print_item,
                     ],
                 )?;
@@ -277,6 +361,8 @@ pub fn run() {
                         &PredefinedMenuItem::separator(app)?,
                         &save_item,
                         &save_as_item,
+                        &PredefinedMenuItem::separator(app)?,
+                        &export_item,
                         &PredefinedMenuItem::separator(app)?,
                         &print_item,
                         &PredefinedMenuItem::separator(app)?,
@@ -329,6 +415,9 @@ pub fn run() {
                     "save_as" => {
                         let _ = app.emit("menu-save-as", ());
                     }
+                    "export_cnc" => {
+                        let _ = app.emit("menu-export-cnc", ());
+                    }
                     "print" => {
                         let _ = app.emit("menu-print", ());
                     }
@@ -339,7 +428,7 @@ pub fn run() {
                         let _ = app.emit("menu-quit", ());
                     }
                     "about" => {
-                        // About is handled by macOS
+                        let _ = app.emit("menu-about", ());
                     }
                     _ => {}
                 }
@@ -368,6 +457,8 @@ pub fn run() {
             get_current_document,
             print_window,
             create_button_folder,
+            ensure_vcp_folder_structure,
+            export_to_cnc,
             save_button_xml,
             load_button_xml,
             copy_file_to_button_folder,
