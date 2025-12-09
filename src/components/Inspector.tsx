@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { join } from "@tauri-apps/api/path";
 import { VcpDocument, Selection } from "../types";
 import "./Inspector.css";
 
@@ -11,6 +12,7 @@ interface InspectorProps {
   onShowNotification?: (message: string, type: 'error' | 'warning' | 'success' | 'info') => void;
   onNewButton?: () => void;
   vcpResourcesFolder: string;
+  defaultSaveLocation?: string;
 }
 
 const Inspector: React.FC<InspectorProps> = ({
@@ -20,6 +22,7 @@ const Inspector: React.FC<InspectorProps> = ({
   onShowNotification,
   onNewButton,
   vcpResourcesFolder,
+  defaultSaveLocation,
 }) => {
   const [activeTab, setActiveTab] = useState<'background' | 'border' | 'image' | 'button'>('background');
   const [columnInput, setColumnInput] = useState(document.column_count.toString());
@@ -54,7 +57,7 @@ const Inspector: React.FC<InspectorProps> = ({
     const affected: string[] = [];
     // Convert to 1-based indexing (data uses 1-based from XML)
     const col1Based = column + 1;
-    
+
     // Check borders
     document.borders.forEach((border, idx) => {
       const endCol = border.column_start + (border.column_span || 1) - 1;
@@ -62,7 +65,7 @@ const Inspector: React.FC<InspectorProps> = ({
         affected.push(`Border ${idx + 1}`);
       }
     });
-    
+
     // Check images
     document.images.forEach((image, idx) => {
       const endCol = image.column_start + (image.column_span || 1) - 1;
@@ -70,7 +73,7 @@ const Inspector: React.FC<InspectorProps> = ({
         affected.push(`Image ${idx + 1}`);
       }
     });
-    
+
     // Check buttons
     document.buttons.forEach((button, idx) => {
       const endCol = button.column + (button.column_span || 1) - 1;
@@ -78,7 +81,7 @@ const Inspector: React.FC<InspectorProps> = ({
         affected.push(`Button ${idx + 1}`);
       }
     });
-    
+
     return affected;
   };
 
@@ -86,7 +89,7 @@ const Inspector: React.FC<InspectorProps> = ({
     const affected: string[] = [];
     // Convert to 1-based indexing (data uses 1-based from XML)
     const row1Based = row + 1;
-    
+
     // Check borders
     document.borders.forEach((border, idx) => {
       const endRow = border.row_start + (border.row_span || 1) - 1;
@@ -94,7 +97,7 @@ const Inspector: React.FC<InspectorProps> = ({
         affected.push(`Border ${idx + 1}`);
       }
     });
-    
+
     // Check images
     document.images.forEach((image, idx) => {
       const endRow = image.row_start + (image.row_span || 1) - 1;
@@ -102,7 +105,7 @@ const Inspector: React.FC<InspectorProps> = ({
         affected.push(`Image ${idx + 1}`);
       }
     });
-    
+
     // Check buttons
     document.buttons.forEach((button, idx) => {
       const endRow = button.row + (button.row_span || 1) - 1;
@@ -110,13 +113,13 @@ const Inspector: React.FC<InspectorProps> = ({
         affected.push(`Button ${idx + 1}`);
       }
     });
-    
+
     return affected;
   };
 
   const handleColumnCountChange = (newCount: number) => {
     const validCount = Math.max(6, newCount || 6);
-    
+
     // Check if reducing columns would affect elements
     if (validCount < document.column_count) {
       // Check each column that would be removed (0-indexed, so column_count-1 is last column)
@@ -135,14 +138,14 @@ const Inspector: React.FC<InspectorProps> = ({
         }
       }
     }
-    
+
     setColumnInput(validCount.toString());
     updateDocument({ column_count: validCount });
   };
 
   const handleRowCountChange = (newCount: number) => {
     const validCount = Math.max(14, newCount || 14);
-    
+
     // Check if reducing rows would affect elements
     if (validCount < document.row_count) {
       // Check each row that would be removed (0-indexed, so row_count-1 is last row)
@@ -161,7 +164,7 @@ const Inspector: React.FC<InspectorProps> = ({
         }
       }
     }
-    
+
     setRowInput(validCount.toString());
     updateDocument({ row_count: validCount });
   };
@@ -322,9 +325,15 @@ const Inspector: React.FC<InspectorProps> = ({
 
     const handleBrowseImage = async () => {
       try {
-        // Default to images folder if available
-        const defaultPath = vcpResourcesFolder ? `${vcpResourcesFolder}/images` : undefined;
-        
+        // Default to images folder based on settings hierarchy
+        let defaultPath: string | undefined;
+
+        if (defaultSaveLocation && defaultSaveLocation.trim() !== '') {
+          defaultPath = await join(defaultSaveLocation, 'images');
+        } else if (vcpResourcesFolder) {
+          defaultPath = `${vcpResourcesFolder}/images`;
+        }
+
         const filePath = await open({
           filters: [{ name: "SVG Images", extensions: ["svg"] }],
           multiple: false,
@@ -333,26 +342,26 @@ const Inspector: React.FC<InspectorProps> = ({
         if (filePath) {
           const sourcePath = filePath as string;
           const filename = sourcePath.split(/[/\\]/).pop() || '';
-          
+
           if (!filename) {
             onShowNotification?.('Invalid file selected', 'error');
             return;
           }
-          
+
           if (!vcpResourcesFolder) {
             onShowNotification?.('Please configure VCP Resources Folder in Settings first', 'warning');
             return;
           }
-          
+
           const imagesFolder = `${vcpResourcesFolder}/images`;
-          
+
           // Copy file to images folder
           await invoke('copy_file_to_button_folder', {
             sourcePath,
             buttonFolder: imagesFolder,
             newFilename: filename,
           });
-          
+
           // Store just the filename (without path)
           const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
           updateImage({ path: nameWithoutExt });

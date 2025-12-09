@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { Store } from "@tauri-apps/plugin-store";
 import { getCurrentWindow, LogicalPosition, LogicalSize } from "@tauri-apps/api/window";
-import { dirname, homeDir } from "@tauri-apps/api/path";
+import { dirname, homeDir, join } from "@tauri-apps/api/path";
 import { listen } from "@tauri-apps/api/event";
 import "./App.css";
 import { VcpDocument, Selection } from "./types";
@@ -14,6 +14,8 @@ import Notification, { NotificationType } from "./components/Notification";
 import UnsavedChangesDialog, { UnsavedChangesResult } from "./components/UnsavedChangesDialog";
 import SettingsDialog from "./components/SettingsDialog";
 import ButtonEditorModal from "./components/ButtonEditorModal";
+import AboutDialog from "./components/AboutDialog";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { UndoRedoManager } from "./undoRedo";
 import { AppSettings, defaultSettings } from "./settingsTypes";
 
@@ -36,10 +38,14 @@ function App() {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [unsavedDialogContext, setUnsavedDialogContext] = useState<'close' | 'new' | 'open'>('close');
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [showAboutDialog, setShowAboutDialog] = useState(false);
   const [showButtonEditor, setShowButtonEditor] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [imageCacheBuster, setImageCacheBuster] = useState(Date.now());
   const unsavedDialogResolve = useRef<((result: UnsavedChangesResult) => void) | null>(null);
+
+  // Read package version from Vite env (set via npm script as VITE_APP_VERSION)
+  const appVersion = (import.meta as any).env?.VITE_APP_VERSION ?? '';
 
   const undoRedoManager = useRef(new UndoRedoManager());
   const store = useRef<Store | null>(null);
@@ -101,29 +107,35 @@ function App() {
 
       try {
         store.current = await Store.load('settings.json');
-        console.log('Store loaded successfully');
 
-        // Load app settings
+        // Load app settings and ensure required fields exist (e.g., attributions)
         const savedSettings = await store.current.get<AppSettings>('appSettings');
         if (savedSettings) {
+          if (!Array.isArray(savedSettings.attributions)) {
+            savedSettings.attributions = [];
+            try {
+              await store.current.set('appSettings', savedSettings);
+              await store.current.save();
+            } catch (e) {
+              console.warn('Failed to persist patched settings:', e);
+            }
+          }
           setSettings(savedSettings);
         }
 
         // Restore window position and size
         const windowState = await store.current.get<WindowState>('windowState');
         if (windowState) {
-          console.log('Restoring window state:', windowState);
           await appWindow.setPosition(new LogicalPosition(windowState.x, windowState.y));
           await appWindow.setSize(new LogicalSize(windowState.width, windowState.height));
-          console.log('Window state restored');
+          // window state restored
         } else {
-          console.log('No saved window state found');
+          // no saved window state
         }
 
         // Try to open last file
         const lastFilePath = await store.current.get<string>('lastFilePath');
         if (lastFilePath && typeof lastFilePath === 'string') {
-          console.log('Attempting to open last file:', lastFilePath);
           try {
             const doc = await invoke<VcpDocument>("open_file", { path: lastFilePath });
             setDocument(doc);
@@ -306,7 +318,12 @@ function App() {
       const unlistenOpen = await listen('menu-open', () => handleOpen());
       const unlistenSave = await listen('menu-save', () => handleSave());
       const unlistenSaveAs = await listen('menu-save-as', () => handleSaveAs());
+      const unlistenExport = await listen('menu-export-cnc', () => handleExportToCNC());
       const unlistenPrint = await listen('menu-print', () => handlePrint());
+      const unlistenAbout = await listen('menu-about', () => {
+        console.log('menu-about event received');
+        setShowAboutDialog(true);
+      });
       const unlistenSettings = await listen('menu-settings', () => setShowSettingsDialog(true));
       const unlistenQuit = await listen('menu-quit', () => handleQuit());
 
@@ -315,7 +332,9 @@ function App() {
         unlistenOpen();
         unlistenSave();
         unlistenSaveAs();
+        unlistenExport();
         unlistenPrint();
+        unlistenAbout();
         unlistenSettings();
         unlistenQuit();
       };
@@ -323,6 +342,19 @@ function App() {
 
     setupMenuListeners();
   }, [document, currentFilePath, isDirty]);
+
+  // About dialog close handler
+  const handleCloseAbout = () => {
+    setShowAboutDialog(false);
+  };
+
+  useEffect(() => {
+    if (showAboutDialog) {
+      console.log('About dialog shown (showAboutDialog=true)');
+    } else {
+      console.log('About dialog hidden (showAboutDialog=false)');
+    }
+  }, [showAboutDialog]);
 
   const handleNew = async () => {
     if (showSettingsDialog || showButtonEditor) return;
@@ -347,12 +379,15 @@ function App() {
     if (!await checkUnsavedChanges('open')) return;
 
     try {
-      // Get smart default path
+      // Use vcpResourcesFolder for Open dialog
       let defaultPath: string | undefined;
-      if (currentFilePath) {
+
+      if (settings.files.vcpResourcesFolder && settings.files.vcpResourcesFolder.trim() !== '') {
+        // Try to use skins subfolder if it exists, otherwise use root
+        const skinsPath = await join(settings.files.vcpResourcesFolder, 'skins');
+        defaultPath = skinsPath;
+      } else if (currentFilePath) {
         defaultPath = await dirname(currentFilePath);
-      } else if (settings.files.vcpResourcesFolder) {
-        defaultPath = settings.files.vcpResourcesFolder;
       } else {
         defaultPath = await homeDir();
       }
@@ -386,8 +421,21 @@ function App() {
       let path = currentFilePath;
 
       if (!path) {
-        // Get smart default path for Save As
-        const defaultPath = settings.files.vcpResourcesFolder || await homeDir();
+        // Get default save location from settings with fallback chain
+        let defaultPath: string | undefined;
+
+        if (settings.files.defaultSaveLocation && settings.files.defaultSaveLocation.trim() !== '') {
+          // Ensure folder structure exists
+          try {
+            await invoke('ensure_vcp_folder_structure', { basePath: settings.files.defaultSaveLocation });
+          } catch (error) {
+            console.warn('Failed to create folder structure:', error);
+          }
+          // Append 'skins' subfolder for VCP files
+          defaultPath = await join(settings.files.defaultSaveLocation, 'skins');
+        } else {
+          defaultPath = settings.files.vcpResourcesFolder || await homeDir();
+        }
 
         const savePath = await save({
           filters: [{ name: "VCP Files", extensions: ["vcp"] }],
@@ -415,14 +463,22 @@ function App() {
     if (!document) return;
 
     try {
-      // Get smart default path
+      // Get default save location from settings with fallback chain
       let defaultPath: string | undefined;
-      if (currentFilePath) {
+
+      if (settings.files.defaultSaveLocation && settings.files.defaultSaveLocation.trim() !== '') {
+        // Ensure folder structure exists
+        try {
+          await invoke('ensure_vcp_folder_structure', { basePath: settings.files.defaultSaveLocation });
+        } catch (error) {
+          console.warn('Failed to create folder structure:', error);
+        }
+        // Append 'skins' subfolder for VCP files
+        defaultPath = await join(settings.files.defaultSaveLocation, 'skins');
+      } else if (currentFilePath) {
         defaultPath = await dirname(currentFilePath);
-      } else if (settings.files.vcpResourcesFolder) {
-        defaultPath = settings.files.vcpResourcesFolder;
       } else {
-        defaultPath = await homeDir();
+        defaultPath = settings.files.vcpResourcesFolder || await homeDir();
       }
 
       const savePath = await save({
@@ -450,6 +506,48 @@ function App() {
     } catch (error) {
       console.error("Failed to print:", error);
       showNotification(`Failed to print: ${error}`, 'error');
+    }
+  };
+
+  const handleExportToCNC = async () => {
+    if (showSettingsDialog || showButtonEditor) return;
+
+    try {
+      // Check that defaultSaveLocation is configured
+      if (!settings.files.defaultSaveLocation || settings.files.defaultSaveLocation.trim() === '') {
+        showNotification('Please configure Default save location in Settings before exporting', 'error');
+        return;
+      }
+
+      // Generate date-based filename
+      const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const defaultFilename = `VCP_Export_${date}.zip`;
+
+      // Show save dialog for export destination
+      const savePath = await save({
+        defaultPath: defaultFilename,
+        filters: [{
+          name: 'Zip Archive',
+          extensions: ['zip']
+        }]
+      });
+
+      if (!savePath) {
+        // User cancelled
+        return;
+      }
+
+      // Call Rust export command
+      await invoke('export_to_cnc', {
+        defaultSaveLocation: settings.files.defaultSaveLocation,
+        vcpResourcesFolder: settings.files.vcpResourcesFolder,
+        outputPath: savePath
+      });
+
+      showNotification('VCP package exported successfully', 'success');
+    } catch (error) {
+      console.error('Export failed:', error);
+      showNotification(`Export failed: ${error}`, 'error');
     }
   };
 
@@ -501,6 +599,20 @@ function App() {
     // Update undo manager max size if changed
     if (newSettings.editor.undoHistoryDepth !== settings.editor.undoHistoryDepth) {
       undoRedoManager.current = new UndoRedoManager(newSettings.editor.undoHistoryDepth);
+    }
+  };
+
+  const handleSettingsChange = async (newSettings: AppSettings) => {
+    setSettings(newSettings);
+    // Persist changes but don't close dialog
+    if (store.current) {
+      try {
+        await store.current.set('appSettings', newSettings);
+        await store.current.save();
+        console.log('Settings auto-saved');
+      } catch (error) {
+        console.error('Failed to auto-save settings:', error);
+      }
     }
   };
 
@@ -884,6 +996,7 @@ function App() {
         <SettingsDialog
           settings={settings}
           onSave={handleSettingsSave}
+          onChange={handleSettingsChange}
           onCancel={() => setShowSettingsDialog(false)}
         />
       )}
@@ -923,19 +1036,31 @@ function App() {
             setShowButtonEditor(false);
           }}
           vcpResourcesFolder={settings.files.vcpResourcesFolder}
+          defaultSaveLocation={settings.files.defaultSaveLocation}
           existingButton={
             selection && selection.type === 'button' && selection.index !== undefined && document
               ? (() => {
                 const button = document.buttons[selection.index];
-                // Only treat as existing button if it has a non-empty name and file
-                // Empty placeholders should go through name entry workflow
-                return button.name && button.name.trim() !== '' && button.file && button.file.trim() !== ''
-                  ? { name: button.name, file: button.file }
+                // Pass the button name when present so the editor pre-fills the name input.
+                // Allow buttons without an XML file to still populate the name field.
+                return button.name && button.name.trim() !== ''
+                  ? { name: button.name, file: button.file || '' }
                   : undefined;
               })()
               : undefined
           }
         />
+      )}
+      {showAboutDialog && (
+        <ErrorBoundary>
+          <AboutDialog
+            onClose={handleCloseAbout}
+            appName="VCP Editor"
+            version={appVersion}
+            attributions={settings.attributions}
+            settingsPathHint={"~/Library/Application Support/com.cncsage.vcp-editor/settings.json"}
+          />
+        </ErrorBoundary>
       )}
       <Toolbar
         onNew={handleNew}
@@ -989,6 +1114,7 @@ function App() {
             onShowNotification={showNotification}
             onNewButton={() => setShowButtonEditor(true)}
             vcpResourcesFolder={settings.files.vcpResourcesFolder}
+            defaultSaveLocation={settings.files.defaultSaveLocation}
           />
         </div>
       </div>

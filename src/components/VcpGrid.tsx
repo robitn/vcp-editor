@@ -606,16 +606,15 @@ const VcpGrid: React.FC<VcpGridProps> = ({
               src={imageSrc}
               alt={imageName}
               className="image-content"
-              onLoad={() => console.log('Image loaded:', imageName)}
+              onLoad={() => { /* image loaded */ }}
               onError={async (e) => {
                 const fullPath = `${vcpResourcesFolder}/images/${imageName}.svg`;
                 console.error('Failed to load image:', imageName, 'path:', imageSrc);
 
                 // Check file validity
-                try {
+                  try {
                   const { invoke } = await import('@tauri-apps/api/core');
-                  const result = await invoke<string>('check_svg_file', { filePath: fullPath });
-                  console.log('SVG file check:', result);
+                  await invoke<string>('check_svg_file', { filePath: fullPath });
                 } catch (err) {
                   console.error('SVG file check failed:', err);
                 }
@@ -699,7 +698,7 @@ const VcpGrid: React.FC<VcpGridProps> = ({
               src={buttonImageSrc}
               alt={button.name}
               className="button-image"
-              onLoad={() => console.log('Button image loaded:', button.name)}
+              onLoad={() => { /* button image loaded */ }}
               onError={(e) => {
                 console.error('Failed to load button image:', button.name, 'path:', buttonImageSrc);
                 // Fallback to text label if image fails to load

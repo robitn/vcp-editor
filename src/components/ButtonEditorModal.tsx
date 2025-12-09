@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
+import { join } from '@tauri-apps/api/path';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { VcpButtonDefinition, createDefaultButton, generateButtonXML, validateButton, parseButtonXML } from '../buttonDefinition';
 import { SKIN_EVENTS, PLC_INPUTS } from '../vcpEventData';
@@ -10,17 +11,17 @@ interface ButtonEditorModalProps {
   onClose: () => void;
   onSave: (buttonName: string) => void;
   vcpResourcesFolder: string;
+  defaultSaveLocation?: string;
   existingButton?: {
     name: string;
     file: string;
   };
 }
 
-// Sanitize button name: lowercase, replace spaces/special chars with underscore
+// Sanitize button name: replace spaces/special chars with underscore
 function sanitizeButtonName(name: string): string {
   return name
-    .toLowerCase()
-    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/[^a-zA-Z0-9_]/g, '_')
     .replace(/_+/g, '_') // Remove consecutive underscores
     .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
 }
@@ -32,7 +33,7 @@ function highlightXML(xml: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
-  
+
   // Split by lines to process each line
   const lines = highlighted.split('\n');
   const processedLines = lines.map(line => {
@@ -40,19 +41,19 @@ function highlightXML(xml: string): string {
     return line.replace(/(&lt;\/?)(\w+)(&gt;)/g, (_match, open, tagName, close) => {
       return `${open}<span class="xml-tag">${tagName}</span>${close}`;
     })
-    // Highlight text content between tags (but not whitespace-only)
-    .replace(/(&gt;)([^&\s][^&]*)(&lt;)/g, (_match, openBracket, content, closeBracket) => {
-      return `${openBracket}<span class="xml-text">${content}</span>${closeBracket}`;
-    });
+      // Highlight text content between tags (but not whitespace-only)
+      .replace(/(&gt;)([^&\s][^&]*)(&lt;)/g, (_match, openBracket, content, closeBracket) => {
+        return `${openBracket}<span class="xml-text">${content}</span>${closeBracket}`;
+      });
   });
-  
+
   return processedLines.join('\n');
 }
 
-export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder, existingButton }: ButtonEditorModalProps) {
+export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder, defaultSaveLocation, existingButton }: ButtonEditorModalProps) {
   const [buttonName, setButtonName] = useState(existingButton?.name || '');
   const [sanitizedName, setSanitizedName] = useState(existingButton?.name || '');
-  const [isExpanded, setIsExpanded] = useState(!!existingButton);  // Auto-expand if editing existing button
+  const [isExpanded, setIsExpanded] = useState(false);  // Don't auto-expand - let user browse first
   const [buttonDef, setButtonDef] = useState<VcpButtonDefinition | null>(null);
   const [buttonFolder, setButtonFolder] = useState('');
   const [previewImageSrc, setPreviewImageSrc] = useState('');
@@ -72,13 +73,25 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Load existing button on mount if provided
+  // Load existing button on mount if provided - just set name, don't auto-load
+  useEffect(() => {
+    if (existingButton) {
+      // Just populate the button name field, don't expand or load
+      setButtonName(existingButton.name);
+      setSanitizedName(existingButton.name);
+    }
+  }, [existingButton]);
+
+  // Remove the auto-load behavior
+  /*
   useEffect(() => {
     if (existingButton && vcpResourcesFolder) {
       loadExistingButton();
     }
-  }, []);
+  }, [existingButton]);
 
+  // Remove the auto-load behavior - commented out
+  /*
   const loadExistingButton = async () => {
     console.log('loadExistingButton called with:', existingButton, vcpResourcesFolder);
     if (!existingButton || !vcpResourcesFolder) return;
@@ -87,7 +100,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
       // Set button folder
       const folder = `${vcpResourcesFolder}/Buttons/${existingButton.name}`;
       setButtonFolder(folder);
-      
+
       // If button has XML file, load it
       if (existingButton.file) {
         console.log('Loading XML for button:', existingButton.name);
@@ -95,21 +108,21 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
           vcpResourcesFolder,
           buttonName: existingButton.name,
         });
-        
+
         console.log('Loaded XML:', xml);
-        
+
         // Parse XML to button definition
         const def = parseButtonXML(xml);
         console.log('Parsed definition:', def);
-        
+
         // Set name and default image from existing button
         def.name = existingButton.name;
         def.defaultImage = `${existingButton.name}.svg`;
-        
+
         setButtonDef(def);
         setXmlPreview(xml);
         setWarnings(validateButton(def));
-        
+
         // Load preview image
         const imagePath = `${folder}/${existingButton.name}.svg`;
         setPreviewImageSrc(convertFileSrc(imagePath));
@@ -119,7 +132,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
         setButtonDef(def);
         setXmlPreview(generateButtonXML(def));
         setWarnings(validateButton(def));
-        
+
         // Check for existing SVG
         const imagePath = `${folder}/${existingButton.name}.svg`;
         setPreviewImageSrc(convertFileSrc(imagePath));
@@ -130,6 +143,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
       setIsExpanded(false);
     }
   };
+  */
 
   const handleNameChange = (value: string) => {
     setButtonName(value);
@@ -138,28 +152,28 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
 
   const handleCreateButton = async () => {
     if (!sanitizedName || !vcpResourcesFolder) return;
-    
+
     try {
       // Create button folder (or get existing)
       const folder = await invoke<string>('create_button_folder', {
         vcpResourcesFolder,
         buttonName: sanitizedName,
       });
-      
+
       setButtonFolder(folder);
-      
+
       // Check if XML file already exists for this button
       let def: VcpButtonDefinition;
       let xmlContent: string;
-      
+
       try {
         const xml = await invoke<string>('load_button_xml', {
           vcpResourcesFolder,
           buttonName: sanitizedName,
         });
-        
-        console.log('Found existing XML for button:', sanitizedName);
-        
+
+        // found existing XML for button
+
         // Parse existing XML
         def = parseButtonXML(xml);
         def.name = sanitizedName;
@@ -167,21 +181,21 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
         xmlContent = xml;
       } catch (error) {
         // No existing XML, create default
-        console.log('No existing XML, creating default for:', sanitizedName);
+        // creating default XML for button
         def = createDefaultButton(sanitizedName);
         xmlContent = generateButtonXML(def);
       }
-      
+
       setButtonDef(def);
       setXmlPreview(xmlContent);
       setWarnings(validateButton(def));
-      
+
       // Check if SVG already exists and set preview
       const imagePath = `${folder}/${sanitizedName}.svg`;
       const previewSrc = convertFileSrc(imagePath);
       setPreviewImageSrc(previewSrc);
-      console.log('Preview image path:', imagePath, '→', previewSrc);
-      
+      // preview image path prepared
+
       // Expand the dialog
       setIsExpanded(true);
     } catch (error) {
@@ -191,37 +205,47 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
   };
 
   const handleBrowseImage = async () => {
-    if (!buttonFolder || !buttonDef || !sanitizedName) return;
-    
+    if (!buttonDef || !sanitizedName) return;
+    if (!buttonFolder && !defaultSaveLocation && !vcpResourcesFolder) return;
+
     try {
+      // Determine browse location
+      let defaultPath = buttonFolder;
+      if (!defaultPath && defaultSaveLocation) {
+        defaultPath = await join(defaultSaveLocation, 'Buttons');
+      } else if (!defaultPath && vcpResourcesFolder) {
+        defaultPath = await join(vcpResourcesFolder, 'Buttons');
+      }
+
       const selected = await open({
         filters: [{ name: 'SVG Images', extensions: ['svg'] }],
         multiple: false,
         title: 'Select Button Image',
+        defaultPath,
       });
-      
+
       if (selected) {
         const sourcePath = selected as string;
         // Use button name for default image (CNC VCP requirement)
         const filename = `${sanitizedName}.svg`;
-        
-        console.log('Copying file:', sourcePath, '→', `${buttonFolder}/${filename}`);
-        
+
+        // copying file to button folder
+
         // Copy file to button folder
-        const destPath = await invoke<string>('copy_file_to_button_folder', {
+        await invoke<string>('copy_file_to_button_folder', {
           sourcePath,
           buttonFolder,
           newFilename: filename,
         });
-        
-        console.log('File copied successfully to:', destPath);
-        
+
+        // file copied successfully
+
         // Update button definition
         const updated = { ...buttonDef, defaultImage: filename };
         setButtonDef(updated);
         setXmlPreview(generateButtonXML(updated));
         setWarnings(validateButton(updated));
-        
+
         // Update preview with cache-busting timestamp to force reload
         const imagePath = `${buttonFolder}/${filename}`;
         const cacheBuster = `?t=${Date.now()}`;
@@ -235,9 +259,9 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
 
   const updatePreviewForState = (state: typeof previewState) => {
     if (!buttonFolder || !sanitizedName || !buttonDef) return;
-    
+
     let imageName = `${sanitizedName}.svg`; // default
-    
+
     switch (state) {
       case 'pressed':
         imageName = buttonDef.onClickSwap || `${sanitizedName}.svg`;
@@ -257,14 +281,14 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
       default:
         imageName = buttonDef.defaultImage || `${sanitizedName}.svg`;
     }
-    
+
     const imagePath = `${buttonFolder}/${imageName}`;
     setPreviewImageSrc(convertFileSrc(imagePath));
   };
 
   const handleSave = async () => {
     if (!sanitizedName || !buttonFolder || !buttonDef) return;
-    
+
     try {
       // Save button XML
       const xml = generateButtonXML(buttonDef);
@@ -273,7 +297,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
         buttonName: sanitizedName,
         xmlContent: xml,
       });
-      
+
       onSave(sanitizedName);
     } catch (error) {
       console.error('Failed to save button:', error);
@@ -283,7 +307,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
 
   return (
     <div className="button-editor-overlay">
-      <div 
+      <div
         className={`button-editor-modal ${isExpanded ? 'expanded' : 'collapsed'}`}
       >
         {/* Header with name input (only for new buttons) */}
@@ -304,16 +328,24 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 placeholder="e.g., Cycle Start"
                 autoFocus
               />
-              <button 
+              <button
                 className="button-editor-browse-btn"
                 onClick={async () => {
                   try {
+                    // Use defaultSaveLocation with /Buttons subfolder if set
+                    let browsePath: string;
+                    if (defaultSaveLocation && defaultSaveLocation.trim() !== '') {
+                      browsePath = await join(defaultSaveLocation, 'Buttons');
+                    } else {
+                      browsePath = `${vcpResourcesFolder}/Buttons`;
+                    }
+
                     const selected = await open({
                       directory: true,
-                      defaultPath: `${vcpResourcesFolder}/Buttons`,
+                      defaultPath: browsePath,
                       title: 'Select Existing Button Folder',
                     });
-                    
+
                     if (selected) {
                       const folderPath = selected as string;
                       // Extract button name from folder path
@@ -331,7 +363,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 Browse
               </button>
               {!isExpanded && (
-                <button 
+                <button
                   className="button-editor-ok-btn"
                   onClick={handleCreateButton}
                   disabled={!sanitizedName}
@@ -348,15 +380,72 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
             )}
           </div>
         )}
-        
-        {/* Header for existing buttons */}
+
+        {/* Header for existing buttons: show editable name so it populates on open, but keep collapsed until OK/Open */}
         {existingButton && (
           <div className="button-editor-header">
             <div className="button-name-input-row">
               <label>Button:</label>
-              <span style={{ flex: 1, fontWeight: 500 }}>{existingButton.name}</span>
+              <input
+                type="text"
+                value={buttonName}
+                onChange={(e) => handleNameChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isExpanded && sanitizedName) {
+                    e.preventDefault();
+                    handleCreateButton();
+                  }
+                }}
+                placeholder="e.g., Cycle Start"
+              />
+              <button
+                className="button-editor-browse-btn"
+                onClick={async () => {
+                  try {
+                    let browsePath: string;
+                    if (defaultSaveLocation && defaultSaveLocation.trim() !== '') {
+                      browsePath = await join(defaultSaveLocation, 'Buttons');
+                    } else {
+                      browsePath = `${vcpResourcesFolder}/Buttons`;
+                    }
+
+                    const selected = await open({
+                      directory: true,
+                      defaultPath: browsePath,
+                      title: 'Select Existing Button Folder',
+                    });
+
+                    if (selected) {
+                      const folderPath = selected as string;
+                      const buttonNameFromPath = folderPath.split('/').pop() || '';
+                      setButtonName(buttonNameFromPath);
+                      setSanitizedName(buttonNameFromPath);
+                    }
+                  } catch (error) {
+                    console.error('Failed to browse buttons:', error);
+                    alert(`Error: ${error}`);
+                  }
+                }}
+                title="Browse existing buttons"
+              >
+                Browse
+              </button>
+              {!isExpanded && (
+                <button
+                  className="button-editor-ok-btn"
+                  onClick={handleCreateButton}
+                  disabled={!sanitizedName}
+                >
+                  Open
+                </button>
+              )}
               <button className="button-editor-close" onClick={onClose}>×</button>
             </div>
+            {sanitizedName && sanitizedName !== buttonName && (
+              <div className="button-name-preview">
+                Folder/file name: <code>{sanitizedName}</code>
+              </div>
+            )}
           </div>
         )}
 
@@ -375,9 +464,9 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                   </div>
                 )}
               </div>
-              
+
               <div className="button-state-toggles">
-                <button 
+                <button
                   className={`state-toggle ${previewState === 'default' ? 'active' : ''}`}
                   onClick={() => {
                     setPreviewState('default');
@@ -386,7 +475,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 >
                   Default
                 </button>
-                <button 
+                <button
                   className={`state-toggle ${previewState === 'pressed' ? 'active' : ''}`}
                   onClick={() => {
                     setPreviewState('pressed');
@@ -395,7 +484,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 >
                   Pressed
                 </button>
-                <button 
+                <button
                   className={`state-toggle ${previewState === 'output-on' ? 'active' : ''}`}
                   onClick={() => {
                     setPreviewState('output-on');
@@ -405,7 +494,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 >
                   Out:ON
                 </button>
-                <button 
+                <button
                   className={`state-toggle ${previewState === 'output-off' ? 'active' : ''}`}
                   onClick={() => {
                     setPreviewState('output-off');
@@ -415,7 +504,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 >
                   Out:OFF
                 </button>
-                <button 
+                <button
                   className={`state-toggle ${previewState === 'input-active' ? 'active' : ''}`}
                   onClick={() => {
                     setPreviewState('input-active');
@@ -425,7 +514,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 >
                   In:Active
                 </button>
-                <button 
+                <button
                   className={`state-toggle ${previewState === 'input-inactive' ? 'active' : ''}`}
                   onClick={() => {
                     setPreviewState('input-inactive');
@@ -444,11 +533,11 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 <div className="editor-section">
                   <label>Default Image:</label>
                   <div className="image-input-row">
-                    <input 
-                      type="text" 
-                      value={buttonDef.defaultImage} 
-                      readOnly 
-                      placeholder={`${sanitizedName}.svg`} 
+                    <input
+                      type="text"
+                      value={buttonDef.defaultImage}
+                      readOnly
+                      placeholder={`${sanitizedName}.svg`}
                     />
                     <button onClick={handleBrowseImage}>Browse</button>
                   </div>
@@ -459,8 +548,8 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 <h3>Behavior</h3>
                 <div className="editor-section">
                   <label>Skin Event:</label>
-                  <select 
-                    value={buttonDef.skinEventNum || ''} 
+                  <select
+                    value={buttonDef.skinEventNum || ''}
                     onChange={(e) => {
                       const updated = { ...buttonDef, skinEventNum: e.target.value ? Number(e.target.value) : undefined };
                       setButtonDef(updated);
@@ -480,13 +569,13 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 <h3 style={{ marginTop: '24px' }}>PLC Behavior (choose one)</h3>
                 <div className="editor-section">
                   <label>
-                    <input 
-                      type="radio" 
+                    <input
+                      type="radio"
                       name="plc-behavior"
                       checked={!buttonDef.plcOutput && !buttonDef.plcInput}
                       onChange={() => {
-                        const updated = { 
-                          ...buttonDef, 
+                        const updated = {
+                          ...buttonDef,
                           plcOutput: undefined,
                           plcInput: undefined
                         };
@@ -500,14 +589,14 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 </div>
                 <div className="editor-section">
                   <label>
-                    <input 
-                      type="radio" 
+                    <input
+                      type="radio"
                       name="plc-behavior"
                       checked={!!buttonDef.plcOutput}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          const updated = { 
-                            ...buttonDef, 
+                          const updated = {
+                            ...buttonDef,
                             plcOutput: { number: 1, ledColorOn: '#EC1C24', ledColorOff: '#81151C' },
                             plcInput: undefined
                           };
@@ -524,12 +613,12 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                   <>
                     <div className="editor-section">
                       <label>Output Number:</label>
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         value={buttonDef.plcOutput.number}
                         onChange={(e) => {
-                          const updated = { 
-                            ...buttonDef, 
+                          const updated = {
+                            ...buttonDef,
                             plcOutput: { ...buttonDef.plcOutput!, number: Number(e.target.value) }
                           };
                           setButtonDef(updated);
@@ -542,12 +631,12 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                     <div className="editor-section">
                       <label>Image ON (optional):</label>
                       <div className="image-input-row">
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={buttonDef.plcOutput.imageOn || ''}
                           onChange={(e) => {
-                            const updated = { 
-                              ...buttonDef, 
+                            const updated = {
+                              ...buttonDef,
                               plcOutput: { ...buttonDef.plcOutput!, imageOn: e.target.value || undefined }
                             };
                             setButtonDef(updated);
@@ -571,8 +660,8 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                                 buttonFolder,
                                 newFilename: filename,
                               });
-                              const updated = { 
-                                ...buttonDef, 
+                              const updated = {
+                                ...buttonDef,
                                 plcOutput: { ...buttonDef.plcOutput!, imageOn: filename }
                               };
                               setButtonDef(updated);
@@ -589,12 +678,12 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                     <div className="editor-section">
                       <label>Image OFF (optional):</label>
                       <div className="image-input-row">
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={buttonDef.plcOutput.imageOff || ''}
                           onChange={(e) => {
-                            const updated = { 
-                              ...buttonDef, 
+                            const updated = {
+                              ...buttonDef,
                               plcOutput: { ...buttonDef.plcOutput!, imageOff: e.target.value || undefined }
                             };
                             setButtonDef(updated);
@@ -618,8 +707,8 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                                 buttonFolder,
                                 newFilename: filename,
                               });
-                              const updated = { 
-                                ...buttonDef, 
+                              const updated = {
+                                ...buttonDef,
                                 plcOutput: { ...buttonDef.plcOutput!, imageOff: filename }
                               };
                               setButtonDef(updated);
@@ -638,14 +727,14 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
 
                 <div className="editor-section" style={{ marginTop: '16px' }}>
                   <label>
-                    <input 
-                      type="radio" 
+                    <input
+                      type="radio"
                       name="plc-behavior"
                       checked={!!buttonDef.plcInput}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          const updated = { 
-                            ...buttonDef, 
+                          const updated = {
+                            ...buttonDef,
                             plcInput: { number: 1057 },
                             plcOutput: undefined
                           };
@@ -662,11 +751,11 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                   <>
                     <div className="editor-section">
                       <label>Input Number:</label>
-                      <select 
+                      <select
                         value={buttonDef.plcInput.number}
                         onChange={(e) => {
-                          const updated = { 
-                            ...buttonDef, 
+                          const updated = {
+                            ...buttonDef,
                             plcInput: { ...buttonDef.plcInput!, number: Number(e.target.value) }
                           };
                           setButtonDef(updated);
@@ -684,12 +773,12 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                     <div className="editor-section">
                       <label>Image Active (optional):</label>
                       <div className="image-input-row">
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={buttonDef.plcInput.imageActive || ''}
                           onChange={(e) => {
-                            const updated = { 
-                              ...buttonDef, 
+                            const updated = {
+                              ...buttonDef,
                               plcInput: { ...buttonDef.plcInput!, imageActive: e.target.value || undefined }
                             };
                             setButtonDef(updated);
@@ -713,8 +802,8 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                                 buttonFolder,
                                 newFilename: filename,
                               });
-                              const updated = { 
-                                ...buttonDef, 
+                              const updated = {
+                                ...buttonDef,
                                 plcInput: { ...buttonDef.plcInput!, imageActive: filename }
                               };
                               setButtonDef(updated);
@@ -731,12 +820,12 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                     <div className="editor-section">
                       <label>Image Inactive (optional):</label>
                       <div className="image-input-row">
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={buttonDef.plcInput.imageInactive || ''}
                           onChange={(e) => {
-                            const updated = { 
-                              ...buttonDef, 
+                            const updated = {
+                              ...buttonDef,
                               plcInput: { ...buttonDef.plcInput!, imageInactive: e.target.value || undefined }
                             };
                             setButtonDef(updated);
@@ -760,8 +849,8 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                                 buttonFolder,
                                 newFilename: filename,
                               });
-                              const updated = { 
-                                ...buttonDef, 
+                              const updated = {
+                                ...buttonDef,
                                 plcInput: { ...buttonDef.plcInput!, imageInactive: filename }
                               };
                               setButtonDef(updated);
