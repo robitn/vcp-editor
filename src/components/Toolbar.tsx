@@ -26,13 +26,13 @@ interface ToolbarProps {
   canAddButton: boolean;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ 
-  onNew, 
-  onOpen, 
-  onSave, 
-  onUndo, 
-  onRedo, 
-  canUndo, 
+const Toolbar: React.FC<ToolbarProps> = ({
+  onNew,
+  onOpen,
+  onSave,
+  onUndo,
+  onRedo,
+  canUndo,
   canRedo,
   onCut,
   onCopy,
@@ -51,42 +51,42 @@ const Toolbar: React.FC<ToolbarProps> = ({
 }) => {
   return (
     <div className="toolbar">
-      <button onClick={onNew} className="toolbar-button" title="New">
-        New
+      <button onClick={onNew} className="toolbar-button" data-title="New">
+        <img src="/icons/new-file-regular-full.svg" alt="New" />
       </button>
-      <button onClick={onOpen} className="toolbar-button" title="Open">
-        Open
+      <button onClick={onOpen} className="toolbar-button" data-title="Open">
+        <img src="/icons/open-file-regular-full.svg" alt="Open" />
       </button>
-      <button onClick={onSave} className="toolbar-button" title="Save">
-        Save
-      </button>
-      <div className="toolbar-separator"></div>
-      <button onClick={onUndo} className="toolbar-button" disabled={!canUndo} title="Undo">
-        Undo
-      </button>
-      <button onClick={onRedo} className="toolbar-button" disabled={!canRedo} title="Redo">
-        Redo
-      </button>
-      <button onClick={onCut} className="toolbar-button" disabled={!canCut} title="Cut (Cmd+X)">
-        Cut
-      </button>
-      <button onClick={onCopy} className="toolbar-button" disabled={!canCopy} title="Copy (Cmd+C)">
-        Copy
-      </button>
-      <button onClick={onPaste} className="toolbar-button" disabled={!canPaste} title="Paste (Cmd+V)">
-        Paste
-      </button>
-      <button onClick={onDelete} className="toolbar-button" disabled={!canDelete} title="Delete (Del)">
-        Delete
+      <button onClick={onSave} className="toolbar-button" data-title="Save">
+        <img src="/icons/save-drive-regular-full.svg" alt="Save" />
       </button>
       <div className="toolbar-separator"></div>
-      <button onClick={onAddBorder} className="toolbar-button toolbar-add" disabled={!canAddBorder} title="Add Border">
+      <button onClick={onUndo} className="toolbar-button" disabled={!canUndo} data-title="Undo">
+        <img src="/icons/undo-solid-full.svg" alt="Undo" />
+      </button>
+      <button onClick={onRedo} className="toolbar-button" disabled={!canRedo} data-title="Redo">
+        <img src="/icons/redo-solid-full.svg" alt="Redo" />
+      </button>
+      <button onClick={onCut} className="toolbar-button" disabled={!canCut} data-title="Cut (Cmd+X)">
+        <img src="/icons/cut-solid-full.svg" alt="Cut" />
+      </button>
+      <button onClick={onCopy} className="toolbar-button" disabled={!canCopy} data-title="Copy (Cmd+C)">
+        <img src="/icons/copy-regular-full.svg" alt="Copy" />
+      </button>
+      <button onClick={onPaste} className="toolbar-button" disabled={!canPaste} data-title="Paste (Cmd+V)">
+        <img src="/icons/paste-regular-full.svg" alt="Paste" />
+      </button>
+      <button onClick={onDelete} className="toolbar-button" disabled={!canDelete} data-title="Delete (Del)">
+        <img src="/icons/delete-regular-full.svg" alt="Delete" />
+      </button>
+      <div className="toolbar-separator"></div>
+      <button onClick={onAddBorder} className="toolbar-button toolbar-add" disabled={!canAddBorder} data-title="Add Border">
         + Border
       </button>
-      <button onClick={onAddImage} className="toolbar-button toolbar-add" disabled={!canAddImage} title="Add Image">
+      <button onClick={onAddImage} className="toolbar-button toolbar-add" disabled={!canAddImage} data-title="Add Image">
         + Image
       </button>
-      <button onClick={onAddButton} className="toolbar-button toolbar-add" disabled={!canAddButton} title="Add Button">
+      <button onClick={onAddButton} className="toolbar-button toolbar-add" disabled={!canAddButton} data-title="Add Button">
         + Button
       </button>
     </div>

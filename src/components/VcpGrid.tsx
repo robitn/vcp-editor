@@ -930,9 +930,9 @@ const VcpGrid: React.FC<VcpGridProps> = ({
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left - OUTER_MARGIN;
-    const y = e.clientY - rect.top - OUTER_MARGIN;
+    // const rect = e.currentTarget.getBoundingClientRect();
+    // const x = e.clientX - rect.left - OUTER_MARGIN;
+    // const y = e.clientY - rect.top - OUTER_MARGIN;
 
     setContextMenu({
       x: e.clientX,
