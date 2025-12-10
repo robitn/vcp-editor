@@ -31,6 +31,9 @@ export default function AboutDialog({ onClose, appName = 'VCP Editor', version =
             <div className="about-dialog">
                 <div className="about-header">
                     <h2>{appName}</h2>
+                </div>
+
+                <div className="about-body">
                     {versionInfo ? (
                         <div className="about-version-info">
                             <div className="version-major">Version {versionInfo.major}.{versionInfo.minor}.{versionInfo.patch}</div>
@@ -45,9 +48,6 @@ export default function AboutDialog({ onClose, appName = 'VCP Editor', version =
                     ) : (
                         version && <div className="about-version">Version {version}</div>
                     )}
-                </div>
-
-                <div className="about-body">
                     <h3>Attributions</h3>
                     {attributions && attributions.length > 0 ? (
                         <ul className="attributions-list">

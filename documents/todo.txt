@@ -27,14 +27,19 @@
 
 ✅ Font library for icons - restyle toolbar buttons 
 ✅ Versioning for the About
-
 ✅ It's become difficult to select the border for editing. -fixed
 
-Remove vestiges of browser UI (Inspect Element, etc)
-- example: Right-click Contextual Menu contains Reload
+Inspector -> Border -> Fill Color should be a ColorPicker control + Transparent.
+Add color tags to VCP Output pane.
+Sort buttons by row then column.
+Generate a user manual.
 
+
+### Version 2 Features:
 Multi tab window.
+
 Add Open Recent > menuitem
+
 Because images and buttons may be created by an outside developer. A floating or fixed palette of images and buttons from a (root) folder. Drag-n-Drop.
 
 
