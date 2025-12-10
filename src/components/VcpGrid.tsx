@@ -527,6 +527,12 @@ const VcpGrid: React.FC<VcpGridProps> = ({
           <div
             className={`grid-border-edge ${isDraggingThis ? 'dragging' : ''}`}
             data-border-index={index}
+            onMouseEnter={() => setHoveredElement({ type: 'border', index })}
+            onMouseLeave={() => setHoveredElement(null)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectionChange({ type: 'border', index, row: border.row_start, column: border.column_start });
+            }}
             style={{
               left: pos.x,
               top: pos.y - edgeWidth / 2,
@@ -538,6 +544,12 @@ const VcpGrid: React.FC<VcpGridProps> = ({
           <div
             className={`grid-border-edge ${isDraggingThis ? 'dragging' : ''}`}
             data-border-index={index}
+            onMouseEnter={() => setHoveredElement({ type: 'border', index })}
+            onMouseLeave={() => setHoveredElement(null)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectionChange({ type: 'border', index, row: border.row_start, column: border.column_start });
+            }}
             style={{
               left: pos.x + width - edgeWidth / 2,
               top: pos.y,
@@ -549,6 +561,12 @@ const VcpGrid: React.FC<VcpGridProps> = ({
           <div
             className={`grid-border-edge ${isDraggingThis ? 'dragging' : ''}`}
             data-border-index={index}
+            onMouseEnter={() => setHoveredElement({ type: 'border', index })}
+            onMouseLeave={() => setHoveredElement(null)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectionChange({ type: 'border', index, row: border.row_start, column: border.column_start });
+            }}
             style={{
               left: pos.x,
               top: pos.y + height - edgeWidth / 2,
@@ -560,6 +578,12 @@ const VcpGrid: React.FC<VcpGridProps> = ({
           <div
             className={`grid-border-edge ${isDraggingThis ? 'dragging' : ''}`}
             data-border-index={index}
+            onMouseEnter={() => setHoveredElement({ type: 'border', index })}
+            onMouseLeave={() => setHoveredElement(null)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectionChange({ type: 'border', index, row: border.row_start, column: border.column_start });
+            }}
             style={{
               left: pos.x - edgeWidth / 2,
               top: pos.y,
@@ -609,6 +633,8 @@ const VcpGrid: React.FC<VcpGridProps> = ({
         <div
           key={`image-${index}`}
           className={`grid-image ${isSelected ? 'selected' : ''} ${isDraggingThis ? 'dragging' : ''}`}
+          onMouseEnter={() => setHoveredElement({ type: 'image', index })}
+          onMouseLeave={() => setHoveredElement(null)}
           style={{
             left: imageLeft,
             top: imageTop,
@@ -700,6 +726,8 @@ const VcpGrid: React.FC<VcpGridProps> = ({
         <div
           key={`button-${index}`}
           className={`grid-button ${isSelected ? 'selected' : ''} ${isDraggingThis ? 'dragging' : ''} ${!isConfigured ? 'placeholder' : ''} ${hasSvg ? 'has-svg' : ''}`}
+          onMouseEnter={() => setHoveredElement({ type: 'button', index })}
+          onMouseLeave={() => setHoveredElement(null)}
           style={{
             left: buttonLeft,
             top: buttonTop,
@@ -855,8 +883,12 @@ const VcpGrid: React.FC<VcpGridProps> = ({
     );
   };
 
+  const [hoveredElement, setHoveredElement] = useState<{ type: string, index: number } | null>(null);
+
   const renderResizeHandles = () => {
-    if (!selection || selection.type === 'empty' || selection.index === undefined) return null;
+    // Only show resize handles when hovering over a selected element
+    if (!hoveredElement || !selection || selection.type === 'empty' || selection.index === undefined) return null;
+    if (hoveredElement.type !== selection.type || hoveredElement.index !== selection.index) return null;
     if (isDragging || isResizing) return null; // Hide handles during drag/resize
 
     let row = selection.row || 1;
@@ -908,8 +940,6 @@ const VcpGrid: React.FC<VcpGridProps> = ({
         style={{
           left: pos.x,
           top: pos.y,
-          width,
-          height,
         }}
       >
         {handles.map(({ position, cursor, top, left }) => (
@@ -1004,9 +1034,9 @@ const VcpGrid: React.FC<VcpGridProps> = ({
           }}
         >
           {renderGrid()}
-          {renderBorders()}
           {renderImages()}
           {renderButtons()}
+          {renderBorders()}
           {renderDragPreview()}
           {renderResizeHandles()}
         </div>

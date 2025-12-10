@@ -48,6 +48,38 @@ function App() {
   // Read package version from Vite env (set via npm script as VITE_APP_VERSION)
   const appVersion = (import.meta as any).env?.VITE_APP_VERSION ?? '';
 
+  // Parse version into components for detailed display
+  const getVersionInfo = (version: string) => {
+    const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/);
+    const baseInfo = match ? {
+      major: parseInt(match[1]),
+      minor: parseInt(match[2]),
+      patch: parseInt(match[3]),
+      preRelease: match[4] || null,
+    } : {
+      major: 0,
+      minor: 0,
+      patch: 0,
+      preRelease: null,
+    };
+
+    // Get build info
+    const now = new Date();
+    const buildDate = now.toLocaleDateString();
+    const buildTime = now.toLocaleTimeString();
+
+    return {
+      full: version,
+      ...baseInfo,
+      buildDate,
+      buildTime,
+      // Could add git commit hash here if available
+      commitHash: 'dev-build' // Placeholder - could be populated from git
+    };
+  };
+
+  const versionInfo = getVersionInfo(appVersion);
+
   const undoRedoManager = useRef(new UndoRedoManager());
   const store = useRef<Store | null>(null);
   const windowSaveTimeout = useRef<number | null>(null);
@@ -1079,6 +1111,7 @@ function App() {
             onClose={handleCloseAbout}
             appName="VCP Editor"
             version={appVersion}
+            versionInfo={versionInfo}
             attributions={settings.attributions}
             settingsPathHint={"~/Library/Application Support/com.cncsage.vcp-editor/settings.json"}
           />
@@ -1089,6 +1122,7 @@ function App() {
         onOpen={handleOpen}
         onSave={handleSave}
         onSaveAs={handleSaveAs}
+        onRefreshImages={() => setImageCacheBuster(Date.now())}
         onUndo={handleUndo}
         onRedo={handleRedo}
         canUndo={canUndo}
