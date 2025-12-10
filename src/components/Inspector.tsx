@@ -277,12 +277,29 @@ const Inspector: React.FC<InspectorProps> = ({
         </div>
         <div className="form-group">
           <label>Fill Color:</label>
-          <input
-            type="text"
-            value={border.fill}
-            onChange={(e) => updateBorder({ fill: e.target.value })}
-            placeholder="Transparent or #HEX"
-          />
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input
+              type="color"
+              value={border.fill === 'Transparent' ? '#ffffff' : border.fill}
+              onChange={(e) => updateBorder({ fill: e.target.value })}
+              style={{ cursor: 'pointer' }}
+            />
+            <button
+              onClick={() => updateBorder({ fill: border.fill === 'Transparent' ? '#ffffff' : 'Transparent' })}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: border.fill === 'Transparent' ? '#007bff' : '#f0f0f0',
+                color: border.fill === 'Transparent' ? 'white' : '#333',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: border.fill === 'Transparent' ? '600' : '400',
+                transition: 'all 0.2s',
+              }}
+            >
+              Transparent
+            </button>
+          </div>
         </div>
         <div className="form-group">
           <label>Outline Color:</label>

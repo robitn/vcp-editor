@@ -52,19 +52,21 @@ async fn print_window(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn create_button_folder(vcp_resources_folder: String, button_name: String) -> Result<String, String> {
+fn create_button_folder(
+    vcp_resources_folder: String,
+    button_name: String,
+) -> Result<String, String> {
     use std::fs;
     use std::path::Path;
-    
+
     let button_folder = format!("{}/Buttons/{}", vcp_resources_folder, button_name);
     let path = Path::new(&button_folder);
-    
+
     // Create folder if it doesn't exist, or just return existing path
     if !path.exists() {
-        fs::create_dir_all(path)
-            .map_err(|e| format!("Failed to create button folder: {}", e))?;
+        fs::create_dir_all(path).map_err(|e| format!("Failed to create button folder: {}", e))?;
     }
-    
+
     Ok(button_folder)
 }
 
@@ -72,137 +74,156 @@ fn create_button_folder(vcp_resources_folder: String, button_name: String) -> Re
 fn ensure_vcp_folder_structure(base_path: String) -> Result<(), String> {
     use std::fs;
     use std::path::Path;
-    
+
     let folders = vec!["skins", "images", "Buttons"];
-    
+
     for folder in folders {
         let folder_path = format!("{}/{}", base_path, folder);
         let path = Path::new(&folder_path);
-        
+
         if !path.exists() {
             fs::create_dir_all(path)
                 .map_err(|e| format!("Failed to create {} folder: {}", folder, e))?;
         }
     }
-    
+
     Ok(())
 }
 
 #[tauri::command]
-fn export_to_cnc(default_save_location: String, _vcp_resources_folder: String, output_path: String) -> Result<(), String> {
+fn export_to_cnc(
+    default_save_location: String,
+    _vcp_resources_folder: String,
+    output_path: String,
+) -> Result<(), String> {
     use std::fs;
+    use std::io::{Read, Write};
     use std::path::Path;
-    use std::io::{Write, Read};
     use zip::write::FileOptions;
     use zip::ZipWriter;
-    
+
     let base_path = Path::new(&default_save_location);
-    
+
     // Get the folder name to use as zip root
-    let folder_name = base_path.file_name()
+    let folder_name = base_path
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("vcp-export");
-    
+
     // Create zip file
-    let file = fs::File::create(&output_path)
-        .map_err(|e| format!("Failed to create zip file: {}", e))?;
+    let file =
+        fs::File::create(&output_path).map_err(|e| format!("Failed to create zip file: {}", e))?;
     let mut zip = ZipWriter::new(file);
-    let options = FileOptions::<()>::default()
-        .compression_method(zip::CompressionMethod::Deflated);
-    
+    let options = FileOptions::<()>::default().compression_method(zip::CompressionMethod::Deflated);
+
     // Walk the entire defaultSaveLocation folder recursively
     let walker = walkdir::WalkDir::new(base_path)
         .into_iter()
         .filter_map(|e| e.ok());
-    
+
     for entry in walker {
         let path = entry.path();
-        
+
         // Skip the root directory itself
         if path == base_path {
             continue;
         }
-        
+
         if path.is_file() {
             // Get relative path from base_path
-            let name = path.strip_prefix(base_path)
+            let name = path
+                .strip_prefix(base_path)
                 .map_err(|e| format!("Path strip error: {}", e))?;
-            
+
             // Build zip path with folder name prefix
             let zip_path = format!("{}/{}", folder_name, name.to_string_lossy());
-            
+
             // Add file to zip
             zip.start_file(&zip_path, options)
                 .map_err(|e| format!("Failed to add file to zip: {}", e))?;
-            
-            let mut file_data = fs::File::open(path)
-                .map_err(|e| format!("Failed to open file: {}", e))?;
+
+            let mut file_data =
+                fs::File::open(path).map_err(|e| format!("Failed to open file: {}", e))?;
             let mut buffer = Vec::new();
-            file_data.read_to_end(&mut buffer)
+            file_data
+                .read_to_end(&mut buffer)
                 .map_err(|e| format!("Failed to read file: {}", e))?;
             zip.write_all(&buffer)
                 .map_err(|e| format!("Failed to write to zip: {}", e))?;
         }
     }
-    
-    zip.finish().map_err(|e| format!("Failed to finalize zip: {}", e))?;
+
+    zip.finish()
+        .map_err(|e| format!("Failed to finalize zip: {}", e))?;
     Ok(())
 }
 
 #[tauri::command]
-fn save_button_xml(button_folder: String, button_name: String, xml_content: String) -> Result<(), String> {
+fn save_button_xml(
+    button_folder: String,
+    button_name: String,
+    xml_content: String,
+) -> Result<(), String> {
     use std::fs;
-    
+
     let xml_path = format!("{}/{}.xml", button_folder, button_name);
-    fs::write(&xml_path, xml_content)
-        .map_err(|e| format!("Failed to write button XML: {}", e))?;
-    
+    fs::write(&xml_path, xml_content).map_err(|e| format!("Failed to write button XML: {}", e))?;
+
     Ok(())
 }
 
 #[tauri::command]
 fn load_button_xml(vcp_resources_folder: String, button_name: String) -> Result<String, String> {
     use std::fs;
-    
-    let xml_path = format!("{}/Buttons/{}/{}.xml", vcp_resources_folder, button_name, button_name);
-    fs::read_to_string(&xml_path)
-        .map_err(|e| format!("Failed to read button XML: {}", e))
+
+    let xml_path = format!(
+        "{}/Buttons/{}/{}.xml",
+        vcp_resources_folder, button_name, button_name
+    );
+    fs::read_to_string(&xml_path).map_err(|e| format!("Failed to read button XML: {}", e))
 }
 
 #[tauri::command]
-fn copy_file_to_button_folder(source_path: String, button_folder: String, new_filename: String) -> Result<String, String> {
+fn copy_file_to_button_folder(
+    source_path: String,
+    button_folder: String,
+    new_filename: String,
+) -> Result<String, String> {
     use std::fs;
     use std::io::Write;
-    
+
     let dest_path = format!("{}/{}", button_folder, new_filename);
-    
+
     // Read source file completely into memory
     let data = fs::read(&source_path)
         .map_err(|e| format!("Failed to read source file '{}': {}", source_path, e))?;
-    
+
     // Verify we actually read data
     if data.is_empty() {
-        return Err(format!("Source file '{}' is empty or is a cloud placeholder", source_path));
+        return Err(format!(
+            "Source file '{}' is empty or is a cloud placeholder",
+            source_path
+        ));
     }
-    
+
     // Write to destination
     let mut file = fs::File::create(&dest_path)
         .map_err(|e| format!("Failed to create destination file '{}': {}", dest_path, e))?;
-    
+
     file.write_all(&data)
         .map_err(|e| format!("Failed to write to destination file '{}': {}", dest_path, e))?;
-    
+
     Ok(dest_path)
 }
 
 #[tauri::command]
 fn list_existing_buttons(vcp_resources_folder: String) -> Result<Vec<String>, String> {
     use std::fs;
-    
+
     let buttons_dir = format!("{}/Buttons", vcp_resources_folder);
     let entries = fs::read_dir(&buttons_dir)
         .map_err(|e| format!("Failed to read Buttons directory: {}", e))?;
-    
+
     let mut buttons = Vec::new();
     for entry in entries {
         if let Ok(entry) = entry {
@@ -215,7 +236,7 @@ fn list_existing_buttons(vcp_resources_folder: String) -> Result<Vec<String>, St
             }
         }
     }
-    
+
     buttons.sort();
     Ok(buttons)
 }
@@ -223,21 +244,21 @@ fn list_existing_buttons(vcp_resources_folder: String) -> Result<Vec<String>, St
 #[tauri::command]
 fn check_svg_file(file_path: String) -> Result<String, String> {
     use std::fs;
-    
+
     // Check if file exists
     if !std::path::Path::new(&file_path).exists() {
         return Err(format!("File does not exist: {}", file_path));
     }
-    
+
     // Try to read the file
-    let content = fs::read_to_string(&file_path)
-        .map_err(|e| format!("Failed to read file: {}", e))?;
-    
+    let content =
+        fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
+
     // Check if it looks like SVG
     if !content.trim().starts_with("<?xml") && !content.trim().starts_with("<svg") {
         return Err("File does not appear to be an SVG".to_string());
     }
-    
+
     Ok(format!("SVG file is readable, {} bytes", content.len()))
 }
 
@@ -252,13 +273,39 @@ pub fn run() {
             let new_item = MenuItem::with_id(app, "new", "New", true, Some("CmdOrCtrl+N"))?;
             let open_item = MenuItem::with_id(app, "open", "Open...", true, Some("CmdOrCtrl+O"))?;
             let save_item = MenuItem::with_id(app, "save", "Save", true, Some("CmdOrCtrl+S"))?;
-            let save_as_item = MenuItem::with_id(app, "save_as", "Save As...", true, Some("CmdOrCtrl+Shift+S"))?;
-            let export_item = MenuItem::with_id(app, "export_cnc", "Export to CNC...", true, None::<&str>)?;
-            let print_item = MenuItem::with_id(app, "print", "Print...", true, Some("CmdOrCtrl+P"))?;
-            let settings_item = MenuItem::with_id(app, "settings", "Settings...", true, Some("CmdOrCtrl+,"))?;
-            let quit_item = MenuItem::with_id(app, "quit", "Quit VCP Editor", true, Some("CmdOrCtrl+Q"))?;
-            let about_item = MenuItem::with_id(app, "about", "About VCP Editor", true, None::<&str>)?;
-            
+            let save_as_item = MenuItem::with_id(
+                app,
+                "save_as",
+                "Save As...",
+                true,
+                Some("CmdOrCtrl+Shift+S"),
+            )?;
+            let export_item =
+                MenuItem::with_id(app, "export_cnc", "Export to CNC...", true, None::<&str>)?;
+            let print_item =
+                MenuItem::with_id(app, "print", "Print...", true, Some("CmdOrCtrl+P"))?;
+            let settings_item =
+                MenuItem::with_id(app, "settings", "Settings...", true, Some("CmdOrCtrl+,"))?;
+            let quit_item =
+                MenuItem::with_id(app, "quit", "Quit VCP Editor", true, Some("CmdOrCtrl+Q"))?;
+            let about_item =
+                MenuItem::with_id(app, "about", "About VCP Editor", true, None::<&str>)?;
+
+            // View menu items
+            let refresh_images_item =
+                MenuItem::with_id(app, "refresh_images", "Refresh Images", true, None::<&str>)?;
+            let zoom_in_item =
+                MenuItem::with_id(app, "zoom_in", "Zoom In", true, Some("CmdOrCtrl+Equal"))?;
+            let zoom_out_item =
+                MenuItem::with_id(app, "zoom_out", "Zoom Out", true, Some("CmdOrCtrl+Minus"))?;
+            let toggle_grid_item = MenuItem::with_id(
+                app,
+                "toggle_grid",
+                "Toggle Grid Lines",
+                true,
+                Some("CmdOrCtrl+G"),
+            )?;
+
             // Build menus
             #[cfg(target_os = "macos")]
             {
@@ -268,17 +315,20 @@ pub fn run() {
                 // explicit labels for hide/hide others/show all to match the
                 // packaged app display name.
                 #[cfg(debug_assertions)]
-                let hide_item = MenuItem::with_id(app, "hide", "Hide VCP Editor", true, None::<&str>)?;
+                let hide_item =
+                    MenuItem::with_id(app, "hide", "Hide VCP Editor", true, None::<&str>)?;
                 #[cfg(not(debug_assertions))]
                 let hide_item = PredefinedMenuItem::hide(app, None)?;
 
                 #[cfg(debug_assertions)]
-                let hide_others_item = MenuItem::with_id(app, "hide_others", "Hide Others", true, None::<&str>)?;
+                let hide_others_item =
+                    MenuItem::with_id(app, "hide_others", "Hide Others", true, None::<&str>)?;
                 #[cfg(not(debug_assertions))]
                 let hide_others_item = PredefinedMenuItem::hide_others(app, None)?;
 
                 #[cfg(debug_assertions)]
-                let show_all_item = MenuItem::with_id(app, "show_all", "Show All", true, None::<&str>)?;
+                let show_all_item =
+                    MenuItem::with_id(app, "show_all", "Show All", true, None::<&str>)?;
                 #[cfg(not(debug_assertions))]
                 let show_all_item = PredefinedMenuItem::show_all(app, None)?;
 
@@ -300,7 +350,7 @@ pub fn run() {
                         &quit_item,
                     ],
                 )?;
-                
+
                 let file_menu = Submenu::with_items(
                     app,
                     "File",
@@ -317,7 +367,7 @@ pub fn run() {
                         &print_item,
                     ],
                 )?;
-                
+
                 let edit_menu = Submenu::with_items(
                     app,
                     "Edit",
@@ -332,7 +382,7 @@ pub fn run() {
                         &PredefinedMenuItem::select_all(app, None)?,
                     ],
                 )?;
-                
+
                 let window_menu = Submenu::with_items(
                     app,
                     "Window",
@@ -344,11 +394,28 @@ pub fn run() {
                         &PredefinedMenuItem::close_window(app, None)?,
                     ],
                 )?;
-                
-                let menu = Menu::with_items(app, &[&app_menu, &file_menu, &edit_menu, &window_menu])?;
+
+                let view_menu = Submenu::with_items(
+                    app,
+                    "View",
+                    true,
+                    &[
+                        &refresh_images_item,
+                        &PredefinedMenuItem::separator(app)?,
+                        &zoom_in_item,
+                        &zoom_out_item,
+                        &PredefinedMenuItem::separator(app)?,
+                        &toggle_grid_item,
+                    ],
+                )?;
+
+                let menu = Menu::with_items(
+                    app,
+                    &[&app_menu, &file_menu, &edit_menu, &view_menu, &window_menu],
+                )?;
                 app.set_menu(menu)?;
             }
-            
+
             #[cfg(not(target_os = "macos"))]
             {
                 let file_menu = Submenu::with_items(
@@ -369,7 +436,7 @@ pub fn run() {
                         &quit_item,
                     ],
                 )?;
-                
+
                 let edit_menu = Submenu::with_items(
                     app,
                     "Edit",
@@ -383,7 +450,7 @@ pub fn run() {
                         &PredefinedMenuItem::paste(app, None)?,
                     ],
                 )?;
-                
+
                 let window_menu = Submenu::with_items(
                     app,
                     "Window",
@@ -395,45 +462,70 @@ pub fn run() {
                         &PredefinedMenuItem::close_window(app, None)?,
                     ],
                 )?;
-                
-                let menu = Menu::with_items(app, &[&file_menu, &edit_menu, &window_menu])?;
+
+                let view_menu = Submenu::with_items(
+                    app,
+                    "View",
+                    true,
+                    &[
+                        &refresh_images_item,
+                        &PredefinedMenuItem::separator(app)?,
+                        &zoom_in_item,
+                        &zoom_out_item,
+                        &PredefinedMenuItem::separator(app)?,
+                        &toggle_grid_item,
+                    ],
+                )?;
+
+                let menu =
+                    Menu::with_items(app, &[&file_menu, &edit_menu, &view_menu, &window_menu])?;
                 app.set_menu(menu)?;
             }
-            
+
             // Handle menu events
-            app.on_menu_event(|app, event| {
-                match event.id().as_ref() {
-                    "new" => {
-                        let _ = app.emit("menu-new", ());
-                    }
-                    "open" => {
-                        let _ = app.emit("menu-open", ());
-                    }
-                    "save" => {
-                        let _ = app.emit("menu-save", ());
-                    }
-                    "save_as" => {
-                        let _ = app.emit("menu-save-as", ());
-                    }
-                    "export_cnc" => {
-                        let _ = app.emit("menu-export-cnc", ());
-                    }
-                    "print" => {
-                        let _ = app.emit("menu-print", ());
-                    }
-                    "settings" => {
-                        let _ = app.emit("menu-settings", ());
-                    }
-                    "quit" => {
-                        let _ = app.emit("menu-quit", ());
-                    }
-                    "about" => {
-                        let _ = app.emit("menu-about", ());
-                    }
-                    _ => {}
+            app.on_menu_event(|app, event| match event.id().as_ref() {
+                "new" => {
+                    let _ = app.emit("menu-new", ());
                 }
+                "open" => {
+                    let _ = app.emit("menu-open", ());
+                }
+                "save" => {
+                    let _ = app.emit("menu-save", ());
+                }
+                "save_as" => {
+                    let _ = app.emit("menu-save-as", ());
+                }
+                "export_cnc" => {
+                    let _ = app.emit("menu-export-cnc", ());
+                }
+                "print" => {
+                    let _ = app.emit("menu-print", ());
+                }
+                "settings" => {
+                    let _ = app.emit("menu-settings", ());
+                }
+                "refresh_images" => {
+                    let _ = app.emit("menu-refresh-images", ());
+                }
+                "zoom_in" => {
+                    let _ = app.emit("menu-zoom-in", ());
+                }
+                "zoom_out" => {
+                    let _ = app.emit("menu-zoom-out", ());
+                }
+                "toggle_grid" => {
+                    let _ = app.emit("menu-toggle-grid", ());
+                }
+                "quit" => {
+                    let _ = app.emit("menu-quit", ());
+                }
+                "about" => {
+                    let _ = app.emit("menu-about", ());
+                }
+                _ => {}
             });
-            
+
             // Open DevTools in development mode
             #[cfg(debug_assertions)]
             {
@@ -442,7 +534,7 @@ pub fn run() {
                     window.open_devtools();
                 }
             }
-            
+
             Ok(())
         })
         .manage(AppState {

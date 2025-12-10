@@ -24,13 +24,13 @@ interface ToolbarProps {
   canAddBorder: boolean;
   canAddImage: boolean;
   canAddButton: boolean;
-  onRefreshImages: () => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
   onNew,
   onOpen,
   onSave,
+  onSaveAs,
   onUndo,
   onRedo,
   canUndo,
@@ -49,7 +49,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
   canAddBorder,
   canAddImage,
   canAddButton,
-  onRefreshImages
 }) => {
   return (
     <div className="toolbar">
@@ -62,8 +61,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
       <button onClick={onSave} className="toolbar-button" data-title="Save">
         <img src="/icons/save-drive-regular-full.svg" alt="Save" />
       </button>
-      <button onClick={onRefreshImages} className="toolbar-button toolbar-add" data-title="Refresh Images">
-        ⟳ Images
+      <button onClick={onSaveAs} className="toolbar-button" data-title="Save As">
+        <img src="/icons/saveas-drive-regular-full.svg" alt="Save As" />
       </button>
       <div className="toolbar-separator"></div>
       <button onClick={onUndo} className="toolbar-button" disabled={!canUndo} data-title="Undo">

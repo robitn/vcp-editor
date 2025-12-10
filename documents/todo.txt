@@ -29,13 +29,29 @@
 ✅ Versioning for the About
 ✅ It's become difficult to select the border for editing. -fixed
 
-Inspector -> Border -> Fill Color should be a ColorPicker control + Transparent.
-Add color tags to VCP Output pane.
+✅ Debug:
+✅ Border/Image/Button selection still has an issue. Border is now easy to select. But if a border interior cell is empty, user can only select border, and cannot add a new image/button. Must be allowed to add a button to an empty cell inside border interior. Possible solution is to only select border when clicking an edge. Also change cursor to help user find the border by hovering its edges.
+
+Some redesign...
+✅ VCP manual (pdf): (project root)/documents/samples/centroid_vcp_users_manual.pdf
+✅     - Add color_on/color_off tags back to VCP Output pane (allows user to choose either led overlay or images).
+✅     - We missed <on_click_swap>[file_name.svg]</on_click_swap> tag option and it's image selection. This covers what happens upon Button pressed event.
+✅     - Button Editor > PLC Output > Output Number (<number></number>) is an LED number. Prefer a drop-down populated with LED numbers (ex: SpinOverPlusLED IS OUT1057 to text: "Spin Over Plus (1057)" value: 1057)
+        - (see (project root)/documents/samples/acorn_mill_vcp_skin_x.vcp file.)
+✅     - Button Editor > PLC Input > Input Number (<number></number>) is a user-configured controller input. 
+✅     - Add <run> and <app> tags within <vcp_button>
+
+Enhance: 
+✅     - Inspector -> Border -> Fill Color should be a ColorPicker control - not a input control. But picker needs a "Transparent" option.
+✅     - Toolbar > remove RefreshButton and place its functionality into a (new) View menubar item. Add Zoom In / Zoom Out menu items to View menu.
+✅     - Add the functionality of Seetings > Grid tab to the View menu. (note: Settings is master and persistent, changes made via the View menu are volatile and do not last past App launches.)
+✅     - Add "Save As" toolbar button (icon begins with saveas_) and wire into 'Save As' functionality.
+
+🛑 Later:
 Sort buttons by row then column.
-Generate a user manual.
+Generate / add to user manual.
 
-
-### Version 2 Features:
+🔮 Future Features:
 Multi tab window.
 
 Add Open Recent > menuitem

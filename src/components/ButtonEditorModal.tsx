@@ -82,6 +82,13 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
     }
   }, [existingButton]);
 
+  // Update preview whenever button folder, definition, or preview state changes
+  useEffect(() => {
+    if (isExpanded && previewState && buttonFolder && buttonDef) {
+      updatePreviewForState(previewState);
+    }
+  }, [buttonFolder, buttonDef, previewState, isExpanded]);
+
   // Remove the auto-load behavior
   /*
   useEffect(() => {
@@ -328,40 +335,6 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 placeholder="e.g., Cycle Start"
                 autoFocus
               />
-              <button
-                className="button-editor-browse-btn"
-                onClick={async () => {
-                  try {
-                    // Use defaultSaveLocation with /Buttons subfolder if set
-                    let browsePath: string;
-                    if (defaultSaveLocation && defaultSaveLocation.trim() !== '') {
-                      browsePath = await join(defaultSaveLocation, 'Buttons');
-                    } else {
-                      browsePath = `${vcpResourcesFolder}/Buttons`;
-                    }
-
-                    const selected = await open({
-                      directory: true,
-                      defaultPath: browsePath,
-                      title: 'Select Existing Button Folder',
-                    });
-
-                    if (selected) {
-                      const folderPath = selected as string;
-                      // Extract button name from folder path
-                      const buttonName = folderPath.split('/').pop() || '';
-                      setButtonName(buttonName);
-                      setSanitizedName(buttonName);
-                    }
-                  } catch (error) {
-                    console.error('Failed to browse buttons:', error);
-                    alert(`Error: ${error}`);
-                  }
-                }}
-                title="Browse existing buttons"
-              >
-                Browse
-              </button>
               {!isExpanded && (
                 <button
                   className="button-editor-ok-btn"
@@ -398,38 +371,6 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 }}
                 placeholder="e.g., Cycle Start"
               />
-              <button
-                className="button-editor-browse-btn"
-                onClick={async () => {
-                  try {
-                    let browsePath: string;
-                    if (defaultSaveLocation && defaultSaveLocation.trim() !== '') {
-                      browsePath = await join(defaultSaveLocation, 'Buttons');
-                    } else {
-                      browsePath = `${vcpResourcesFolder}/Buttons`;
-                    }
-
-                    const selected = await open({
-                      directory: true,
-                      defaultPath: browsePath,
-                      title: 'Select Existing Button Folder',
-                    });
-
-                    if (selected) {
-                      const folderPath = selected as string;
-                      const buttonNameFromPath = folderPath.split('/').pop() || '';
-                      setButtonName(buttonNameFromPath);
-                      setSanitizedName(buttonNameFromPath);
-                    }
-                  } catch (error) {
-                    console.error('Failed to browse buttons:', error);
-                    alert(`Error: ${error}`);
-                  }
-                }}
-                title="Browse existing buttons"
-              >
-                Browse
-              </button>
               {!isExpanded && (
                 <button
                   className="button-editor-ok-btn"
@@ -542,6 +483,47 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                     <button onClick={handleBrowseImage}>Browse</button>
                   </div>
                 </div>
+                <div className="editor-section">
+                  <label>On Click Swap (Press State Image):</label>
+                  <div className="image-input-row">
+                    <input
+                      type="text"
+                      value={buttonDef.onClickSwap || ''}
+                      placeholder="image_pressed.svg (optional)"
+                      onChange={(e) => {
+                        const updated = { ...buttonDef, onClickSwap: e.target.value || undefined };
+                        setButtonDef(updated);
+                        setXmlPreview(generateButtonXML(updated));
+                        setWarnings(validateButton(updated));
+                      }}
+                    />
+                    <button onClick={async () => {
+                      try {
+                        const selected = await open({
+                          filters: [{ name: 'SVG Images', extensions: ['svg'] }],
+                          multiple: false,
+                          title: 'Select Press State Image',
+                        });
+                        if (selected) {
+                          const sourcePath = selected as string;
+                          const filename = sourcePath.split('/').pop() || '';
+                          await invoke('copy_file_to_button_folder', {
+                            sourcePath,
+                            buttonFolder,
+                            newFilename: filename,
+                          });
+                          const updated = { ...buttonDef, onClickSwap: filename };
+                          setButtonDef(updated);
+                          setXmlPreview(generateButtonXML(updated));
+                          setWarnings(validateButton(updated));
+                        }
+                      } catch (error) {
+                        console.error('Failed to browse image:', error);
+                        alert(`Error: ${error}`);
+                      }
+                    }}>Browse</button>
+                  </div>
+                </div>
               </div>
 
               <div className="button-editor-right-panel">
@@ -564,6 +546,161 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <h3 style={{ marginTop: '24px' }}>Execution (choose one)</h3>
+                <div className="editor-section">
+                  <label>
+                    <input
+                      type="radio"
+                      name="execution-type"
+                      checked={!buttonDef.run && !buttonDef.app}
+                      onChange={() => {
+                        const updated = { ...buttonDef, run: undefined, app: undefined };
+                        setButtonDef(updated);
+                        setXmlPreview(generateButtonXML(updated));
+                        setWarnings(validateButton(updated));
+                      }}
+                    />
+                    {' '}None
+                  </label>
+                </div>
+
+                <div className="editor-section">
+                  <label>
+                    <input
+                      type="radio"
+                      name="execution-type"
+                      checked={!!buttonDef.run && buttonDef.run.type === 'line'}
+                      onChange={() => {
+                        const updated = { ...buttonDef, run: { type: 'line' as const, value: '' }, app: undefined };
+                        setButtonDef(updated);
+                        setXmlPreview(generateButtonXML(updated));
+                        setWarnings(validateButton(updated));
+                      }}
+                    />
+                    {' '}Run Line
+                  </label>
+                  {buttonDef.run && buttonDef.run.type === 'line' && (
+                    <input
+                      type="text"
+                      value={buttonDef.run.value}
+                      placeholder="Command line to execute"
+                      onChange={(e) => {
+                        const updated = { ...buttonDef, run: { type: 'line' as const, value: e.target.value } };
+                        setButtonDef(updated);
+                        setXmlPreview(generateButtonXML(updated));
+                        setWarnings(validateButton(updated));
+                      }}
+                      style={{ marginLeft: '8px', marginTop: '8px' }}
+                    />
+                  )}
+                </div>
+
+                <div className="editor-section">
+                  <label>
+                    <input
+                      type="radio"
+                      name="execution-type"
+                      checked={!!buttonDef.run && buttonDef.run.type === 'macro'}
+                      onChange={() => {
+                        const updated = { ...buttonDef, run: { type: 'macro' as const, value: '' }, app: undefined };
+                        setButtonDef(updated);
+                        setXmlPreview(generateButtonXML(updated));
+                        setWarnings(validateButton(updated));
+                      }}
+                    />
+                    {' '}Run Macro
+                  </label>
+                  {buttonDef.run && buttonDef.run.type === 'macro' && (
+                    <div style={{ display: 'flex', gap: '8px', marginLeft: '8px', marginTop: '8px' }}>
+                      <input
+                        type="text"
+                        value={buttonDef.run.value}
+                        placeholder="Macro to execute"
+                        onChange={(e) => {
+                          const updated = { ...buttonDef, run: { type: 'macro' as const, value: e.target.value } };
+                          setButtonDef(updated);
+                          setXmlPreview(generateButtonXML(updated));
+                          setWarnings(validateButton(updated));
+                        }}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        className="button-editor-browse-btn"
+                        onClick={async () => {
+                          try {
+                            const selected = await open({
+                              title: 'Select Macro File',
+                              multiple: false,
+                            });
+                            if (selected) {
+                              const filepath = selected as string;
+                              const updated = { ...buttonDef, run: { type: 'macro' as const, value: filepath } };
+                              setButtonDef(updated);
+                              setXmlPreview(generateButtonXML(updated));
+                              setWarnings(validateButton(updated));
+                            }
+                          } catch (error) {
+                            console.error('Failed to browse macro:', error);
+                            alert(`Error: ${error}`);
+                          }
+                        }}>Browse</button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="editor-section">
+                  <label>
+                    <input
+                      type="radio"
+                      name="execution-type"
+                      checked={!!buttonDef.app}
+                      onChange={() => {
+                        const updated = { ...buttonDef, run: undefined, app: '' };
+                        setButtonDef(updated);
+                        setXmlPreview(generateButtonXML(updated));
+                        setWarnings(validateButton(updated));
+                      }}
+                    />
+                    {' '}Launch App
+                  </label>
+                  {buttonDef.app !== undefined && (
+                    <div style={{ display: 'flex', gap: '8px', marginLeft: '8px', marginTop: '8px' }}>
+                      <input
+                        type="text"
+                        value={buttonDef.app}
+                        placeholder="Application to launch"
+                        onChange={(e) => {
+                          const updated = { ...buttonDef, app: e.target.value || undefined };
+                          setButtonDef(updated);
+                          setXmlPreview(generateButtonXML(updated));
+                          setWarnings(validateButton(updated));
+                        }}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        className="button-editor-browse-btn"
+                        onClick={async () => {
+                          try {
+                            const selected = await open({
+                              title: 'Select Application',
+                              multiple: false,
+                            });
+                            if (selected) {
+                              const filepath = selected as string;
+                              const updated = { ...buttonDef, app: filepath };
+                              setButtonDef(updated);
+                              setXmlPreview(generateButtonXML(updated));
+                              setWarnings(validateButton(updated));
+                            }
+                          } catch (error) {
+                            console.error('Failed to browse app:', error);
+                            alert(`Error: ${error}`);
+                          }
+                        }}>Browse</button>
+                    </div>
+                  )}
                 </div>
 
                 <h3 style={{ marginTop: '24px' }}>PLC Behavior (choose one)</h3>
@@ -597,7 +734,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                         if (e.target.checked) {
                           const updated = {
                             ...buttonDef,
-                            plcOutput: { number: 1, ledColorOn: '#EC1C24', ledColorOff: '#81151C' },
+                            plcOutput: { number: 1, colorOn: '#EC1C24', colorOff: '#81151C' },
                             plcInput: undefined
                           };
                           setButtonDef(updated);
@@ -627,6 +764,72 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                         }}
                         min="1"
                       />
+                    </div>
+                    <div className="editor-section">
+                      <label>LED Color ON:</label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="color"
+                          value={buttonDef.plcOutput.colorOn}
+                          onChange={(e) => {
+                            const updated = {
+                              ...buttonDef,
+                              plcOutput: { ...buttonDef.plcOutput!, colorOn: e.target.value }
+                            };
+                            setButtonDef(updated);
+                            setXmlPreview(generateButtonXML(updated));
+                            setWarnings(validateButton(updated));
+                          }}
+                        />
+                        <input
+                          type="text"
+                          value={buttonDef.plcOutput.colorOn}
+                          onChange={(e) => {
+                            const updated = {
+                              ...buttonDef,
+                              plcOutput: { ...buttonDef.plcOutput!, colorOn: e.target.value }
+                            };
+                            setButtonDef(updated);
+                            setXmlPreview(generateButtonXML(updated));
+                            setWarnings(validateButton(updated));
+                          }}
+                          placeholder="#EC1C24"
+                          style={{ flex: 1, minWidth: '100px' }}
+                        />
+                      </div>
+                    </div>
+                    <div className="editor-section">
+                      <label>LED Color OFF:</label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="color"
+                          value={buttonDef.plcOutput.colorOff}
+                          onChange={(e) => {
+                            const updated = {
+                              ...buttonDef,
+                              plcOutput: { ...buttonDef.plcOutput!, colorOff: e.target.value }
+                            };
+                            setButtonDef(updated);
+                            setXmlPreview(generateButtonXML(updated));
+                            setWarnings(validateButton(updated));
+                          }}
+                        />
+                        <input
+                          type="text"
+                          value={buttonDef.plcOutput.colorOff}
+                          onChange={(e) => {
+                            const updated = {
+                              ...buttonDef,
+                              plcOutput: { ...buttonDef.plcOutput!, colorOff: e.target.value }
+                            };
+                            setButtonDef(updated);
+                            setXmlPreview(generateButtonXML(updated));
+                            setWarnings(validateButton(updated));
+                          }}
+                          placeholder="#81151C"
+                          style={{ flex: 1, minWidth: '100px' }}
+                        />
+                      </div>
                     </div>
                     <div className="editor-section">
                       <label>Image ON (optional):</label>
