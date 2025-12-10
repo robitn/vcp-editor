@@ -116,8 +116,8 @@
 }
 
 .about-header {
-    background: var(--about-header-gradient);
-    padding: 22px 22px 19px;
+    /* background: var(--about-header-gradient); */
+    padding: 14px 22px 12px;
     text-align: center;
     position: relative;
 }
@@ -137,7 +137,7 @@
 
 .about-header h2 {
     margin: 0;
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 700;
     color: #ffffff;
     letter-spacing: -0.4px;
@@ -217,7 +217,7 @@
 }
 
 .about-body h3 {
-    margin: 0 0 13px 0;
+    margin: 18px 0 10px 0;
     font-size: 13px;
     font-weight: 600;
     color: var(--about-text-primary);
