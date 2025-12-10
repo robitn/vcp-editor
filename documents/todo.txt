@@ -25,10 +25,10 @@
     - Selected empty cell > Border, Button, Image
     - Select occupied cell > Border, -, Cut, Copy, Paste, Delete
 
-Font library for icons - restyle toolbar buttons ✅ 
-Versioning for the About
+✅ Font library for icons - restyle toolbar buttons 
+✅ Versioning for the About
 
-It's become difficult to select the border for editing.
+✅ It's become difficult to select the border for editing. -fixed
 
 Remove vestiges of browser UI (Inspect Element, etc)
 - example: Right-click Contextual Menu contains Reload

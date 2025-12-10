@@ -152,6 +152,45 @@
     letter-spacing: 0.2px;
 }
 
+.about-version-info {
+    margin-top: 8px;
+}
+
+.version-major {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.version-prerelease {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 10px;
+    font-weight: 500;
+    margin-top: 2px;
+    font-style: italic;
+}
+
+.version-details {
+    margin-top: 4px;
+}
+
+.version-build {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 9px;
+    font-weight: 400;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+    letter-spacing: 0.1px;
+}
+
+.version-commit {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 9px;
+    font-weight: 400;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+    letter-spacing: 0.1px;
+}
+
 .about-body {
     padding: 19px 22px;
     max-height: 320px;
