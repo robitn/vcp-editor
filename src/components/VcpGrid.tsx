@@ -404,16 +404,8 @@ const VcpGrid: React.FC<VcpGridProps> = ({
       }
     }
 
-    // Check borders
-    for (let i = 0; i < document.borders.length; i++) {
-      const border = document.borders[i];
-
-      if (row >= border.row_start && row < border.row_start + border.row_span &&
-        col >= border.column_start && col < border.column_start + border.column_span) {
-        return { type: 'border', index: i, row: border.row_start, column: border.column_start };
-      }
-    }
-
+    // NOTE: Borders are NOT checked here. Borders should only be selected by clicking their edge handlers.
+    // This allows users to add buttons/images to empty cells inside border interiors.
     return null;
   };
 

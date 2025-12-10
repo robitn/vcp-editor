@@ -7,13 +7,13 @@ export interface VcpButtonDefinition {
   defaultImage: string; // Filename only (e.g., "reset.svg")
   onClickSwap?: string; // Optional press-state swap image
   
-  // Output-driven behavior
+  // Output-driven behavior (LED indicator)
   plcOutput?: {
     number: number;
-    ledColorOn: string;
-    ledColorOff: string;
-    imageOn?: string;
-    imageOff?: string;
+    colorOn: string;    // LED color when ON (e.g., "#EC1C24")
+    colorOff: string;   // LED color when OFF (e.g., "#81151C")
+    imageOn?: string;   // Optional image overlay when ON
+    imageOff?: string;  // Optional image overlay when OFF
   };
   
   // Input-driven behavior
@@ -23,8 +23,14 @@ export interface VcpButtonDefinition {
     imageInactive?: string;
   };
   
-  // Behavior
+  // Behavior & Execution
+  // Note: Either 'run' or 'app' can be present, but not both
   skinEventNum?: number;
+  run?: {
+    type: 'line' | 'macro';
+    value: string;
+  };
+  app?: string;        // Application to launch
 }
 
 // Generate VCP button XML from definition
@@ -39,11 +45,21 @@ export function generateButtonXML(button: VcpButtonDefinition): string {
     xml += `  <on_click_swap>${button.onClickSwap}</on_click_swap>\n`;
   }
   
+  if (button.run) {
+    xml += `  <run>\n`;
+    xml += `    <${button.run.type}>${escapeXml(button.run.value)}</${button.run.type}>\n`;
+    xml += `  </run>\n`;
+  }
+  
+  if (button.app) {
+    xml += `  <app>${escapeXml(button.app)}</app>\n`;
+  }
+  
   if (button.plcOutput) {
     xml += '  <plc_output>\n';
     xml += `    <number>${button.plcOutput.number}</number>\n`;
-    xml += `    <color_on>${button.plcOutput.ledColorOn}</color_on>\n`;
-    xml += `    <color_off>${button.plcOutput.ledColorOff}</color_off>\n`;
+    xml += `    <color_on>${button.plcOutput.colorOn}</color_on>\n`;
+    xml += `    <color_off>${button.plcOutput.colorOff}</color_off>\n`;
     if (button.plcOutput.imageOn) {
       xml += `    <image_on>${button.plcOutput.imageOn}</image_on>\n`;
     }
@@ -69,6 +85,16 @@ export function generateButtonXML(button: VcpButtonDefinition): string {
   return xml;
 }
 
+// Helper: escape XML special characters
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 // Parse VCP button XML to definition
 export function parseButtonXML(xml: string): VcpButtonDefinition {
   const parser = new DOMParser();
@@ -89,22 +115,42 @@ export function parseButtonXML(xml: string): VcpButtonDefinition {
     button.onClickSwap = onClickSwap;
   }
   
+  const runEl = doc.querySelector('run');
+  if (runEl) {
+    const lineEl = runEl.querySelector('line');
+    const macroEl = runEl.querySelector('macro');
+    
+    if (lineEl && lineEl.textContent) {
+      button.run = {
+        type: 'line',
+        value: lineEl.textContent
+      };
+    } else if (macroEl && macroEl.textContent) {
+      button.run = {
+        type: 'macro',
+        value: macroEl.textContent
+      };
+    }
+  }
+  
+  const app = doc.querySelector('app')?.textContent;
+  if (app) {
+    button.app = app;
+  }
+  
   const plcOutputEl = doc.querySelector('plc_output');
   if (plcOutputEl) {
     const number = plcOutputEl.querySelector('number')?.textContent;
-    const ledColorOn = plcOutputEl.querySelector('led_color_on')?.textContent || 
-                       plcOutputEl.querySelector('color_on')?.textContent;
-    const ledColorOff = plcOutputEl.querySelector('led_color_off')?.textContent || 
-                        plcOutputEl.querySelector('color_off')?.textContent;
+    const colorOn = plcOutputEl.querySelector('color_on')?.textContent || '#EC1C24';
+    const colorOff = plcOutputEl.querySelector('color_off')?.textContent || '#81151C';
     const imageOn = plcOutputEl.querySelector('image_on')?.textContent;
     const imageOff = plcOutputEl.querySelector('image_off')?.textContent;
     
-    // LED colors are optional - use defaults if not present
     if (number) {
       button.plcOutput = {
         number: parseInt(number),
-        ledColorOn: ledColorOn || '#EC1C24',
-        ledColorOff: ledColorOff || '#81151C',
+        colorOn: colorOn,
+        colorOff: colorOff,
         imageOn: imageOn || undefined,
         imageOff: imageOff || undefined,
       };
@@ -157,11 +203,11 @@ export function validateButton(button: VcpButtonDefinition): string[] {
     warnings.push('Cannot bind both input and output');
   }
   
-  if ((button.plcOutput?.ledColorOn || button.plcOutput?.ledColorOff) && !button.plcOutput?.number) {
+  if ((button.plcOutput?.colorOn || button.plcOutput?.colorOff) && !button.plcOutput?.number) {
     warnings.push('LED colors defined but no PLC output selected');
   }
   
-  if (button.plcOutput?.number && (!button.plcOutput.ledColorOn || !button.plcOutput.ledColorOff)) {
+  if (button.plcOutput?.number && (!button.plcOutput.colorOn || !button.plcOutput.colorOff)) {
     warnings.push('PLC output requires LED colors');
   }
   

@@ -358,6 +358,40 @@ function App() {
         setShowAboutDialog(true);
       });
       const unlistenSettings = await listen('menu-settings', () => setShowSettingsDialog(true));
+      const unlistenRefreshImages = await listen('menu-refresh-images', () => setImageCacheBuster(Date.now()));
+      const unlistenZoomIn = await listen('menu-zoom-in', () => {
+        setSettings(prev => {
+          const newZoom = Math.min(prev.grid.cellZoom + 10, 200);
+          return {
+            ...prev,
+            grid: {
+              ...prev.grid,
+              cellZoom: newZoom
+            }
+          };
+        });
+      });
+      const unlistenZoomOut = await listen('menu-zoom-out', () => {
+        setSettings(prev => {
+          const newZoom = Math.max(prev.grid.cellZoom - 10, 50);
+          return {
+            ...prev,
+            grid: {
+              ...prev.grid,
+              cellZoom: newZoom
+            }
+          };
+        });
+      });
+      const unlistenToggleGrid = await listen('menu-toggle-grid', () => {
+        setSettings(prev => ({
+          ...prev,
+          grid: {
+            ...prev.grid,
+            showGridLines: !prev.grid.showGridLines
+          }
+        }));
+      });
       const unlistenQuit = await listen('menu-quit', () => handleQuit());
 
       return () => {
@@ -369,11 +403,18 @@ function App() {
         unlistenPrint();
         unlistenAbout();
         unlistenSettings();
+        unlistenRefreshImages();
+        unlistenZoomIn();
+        unlistenZoomOut();
+        unlistenToggleGrid();
         unlistenQuit();
       };
     };
 
-    setupMenuListeners();
+    setupMenuListeners().then(cleanup => {
+      // Return cleanup function
+      return cleanup;
+    }).catch(err => console.error('Failed to setup menu listeners:', err));
   }, [document, currentFilePath, isDirty]);
 
   // Apply theme setting to document root
@@ -1122,7 +1163,6 @@ function App() {
         onOpen={handleOpen}
         onSave={handleSave}
         onSaveAs={handleSaveAs}
-        onRefreshImages={() => setImageCacheBuster(Date.now())}
         onUndo={handleUndo}
         onRedo={handleRedo}
         canUndo={canUndo}

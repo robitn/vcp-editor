@@ -58,13 +58,15 @@
 .grid-border-edge {
     position: absolute;
     pointer-events: all;
-    cursor: grab;
+    cursor: help;
     z-index: 20;
     background: transparent;
+    transition: background-color 0.2s;
 }
 
 .grid-border-edge:hover {
-    background: rgba(0, 123, 255, 0.1);
+    background: rgba(0, 123, 255, 0.15);
+    cursor: grab;
 }
 
 .grid-border-edge.dragging {
@@ -386,6 +388,7 @@
 
 .theme-light .grid-border-edge:hover {
     background-color: rgba(0, 123, 255, 0.2);
+    cursor: grab;
 }
 
 .theme-light .grid-image:hover {
@@ -459,6 +462,7 @@
 
 .theme-dark .grid-border-edge:hover {
     background: rgba(0, 102, 204, 0.2);
+    cursor: grab;
 }
 
 .theme-dark .grid-image:hover {
