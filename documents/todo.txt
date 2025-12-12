@@ -27,7 +27,7 @@
 
 ✅ Font library for icons - restyle toolbar buttons 
 ✅ Versioning for the About
-✅ It's become difficult to select the border for editing. ___
+✅ It's become difficult to select the border for editing. __?__
 
 ✅ Debug:
 ✅ Border/Image/Button selection still has an issue. Border is now easy to select. But if a border interior cell is empty, user can only select border, and cannot add a new image/button. Must be allowed to add a button to an empty cell inside border interior. Possible solution is to only select border when clicking an edge. Also change cursor to help user find the border by hovering its edges.
