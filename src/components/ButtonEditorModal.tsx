@@ -336,13 +336,41 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 autoFocus
               />
               {!isExpanded && (
-                <button
-                  className="button-editor-ok-btn"
-                  onClick={handleCreateButton}
-                  disabled={!sanitizedName}
-                >
-                  OK
-                </button>
+                <>
+                  <button
+                    className="button-editor-browse-btn"
+                    onClick={async () => {
+                      try {
+                        const selected = await open({
+                          directory: true,
+                          defaultPath: `${vcpResourcesFolder}/Buttons`,
+                          title: 'Select Existing Button Folder',
+                        });
+
+                        if (selected) {
+                          const folderPath = selected as string;
+                          // Extract button name from folder path
+                          const buttonName = folderPath.split('/').pop() || '';
+                          setButtonName(buttonName);
+                          setSanitizedName(buttonName);
+                        }
+                      } catch (error) {
+                        console.error('Failed to browse buttons:', error);
+                        alert(`Error: ${error}`);
+                      }
+                    }}
+                    title="Browse existing buttons"
+                  >
+                    Browse
+                  </button>
+                  <button
+                    className="button-editor-ok-btn"
+                    onClick={handleCreateButton}
+                    disabled={!sanitizedName}
+                  >
+                    OK
+                  </button>
+                </>
               )}
               <button className="button-editor-close" onClick={onClose}>×</button>
             </div>
@@ -372,13 +400,41 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 placeholder="e.g., Cycle Start"
               />
               {!isExpanded && (
-                <button
-                  className="button-editor-ok-btn"
-                  onClick={handleCreateButton}
-                  disabled={!sanitizedName}
-                >
-                  Open
-                </button>
+                <>
+                  <button
+                    className="button-editor-browse-btn"
+                    onClick={async () => {
+                      try {
+                        const selected = await open({
+                          directory: true,
+                          defaultPath: `${vcpResourcesFolder}/Buttons`,
+                          title: 'Select Existing Button Folder',
+                        });
+
+                        if (selected) {
+                          const folderPath = selected as string;
+                          // Extract button name from folder path
+                          const buttonName = folderPath.split('/').pop() || '';
+                          setButtonName(buttonName);
+                          setSanitizedName(buttonName);
+                        }
+                      } catch (error) {
+                        console.error('Failed to browse buttons:', error);
+                        alert(`Error: ${error}`);
+                      }
+                    }}
+                    title="Browse existing buttons"
+                  >
+                    Browse
+                  </button>
+                  <button
+                    className="button-editor-ok-btn"
+                    onClick={handleCreateButton}
+                    disabled={!sanitizedName}
+                  >
+                    Open
+                  </button>
+                </>
               )}
               <button className="button-editor-close" onClick={onClose}>×</button>
             </div>

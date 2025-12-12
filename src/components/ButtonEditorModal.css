@@ -47,6 +47,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-wrap: wrap;
 }
 
 .button-name-input-row label {
@@ -56,6 +57,7 @@
 
 .button-name-input-row input {
     flex: 1;
+    min-width: 150px;
     padding: 8px 12px;
     border: 1px solid #ccc;
     border-radius: 4px;
@@ -71,6 +73,8 @@
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.2s;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .button-editor-ok-btn:hover:not(:disabled) {
@@ -90,6 +94,8 @@
     font-size: 13px;
     cursor: pointer;
     transition: background-color 0.2s;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .button-editor-browse-btn:hover {
@@ -110,6 +116,7 @@
     align-items: center;
     justify-content: center;
     transition: color 0.2s;
+    flex-shrink: 0;
 }
 
 .button-editor-close:hover {

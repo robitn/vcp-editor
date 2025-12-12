@@ -1181,6 +1181,8 @@ function App() {
         canAddBorder={selection !== null && selection.type === 'empty'}
         canAddImage={selection !== null && selection.type === 'empty'}
         canAddButton={selection !== null && selection.type === 'empty'}
+        onSettings={() => setShowSettingsDialog(true)}
+        onAbout={() => setShowAboutDialog(true)}
       />
       <div className="main-container">
         <div

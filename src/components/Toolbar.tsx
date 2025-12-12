@@ -1,5 +1,9 @@
-import React from "react";
+import React, { useRef, useState, useEffect } from "react";
+
+// Global constant to detect if running on Windows
+import { isWindows } from "../utils/platform";
 import "./Toolbar.css";
+import "./ContextMenu.css";
 
 interface ToolbarProps {
   onNew: () => void;
@@ -24,7 +28,10 @@ interface ToolbarProps {
   canAddBorder: boolean;
   canAddImage: boolean;
   canAddButton: boolean;
+  onSettings?: () => void;
+  onAbout?: () => void;
 }
+
 
 const Toolbar: React.FC<ToolbarProps> = ({
   onNew,
@@ -49,6 +56,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
   canAddBorder,
   canAddImage,
   canAddButton,
+  onSettings,
+  onAbout,
 }) => {
   return (
     <div className="toolbar">
@@ -93,6 +102,62 @@ const Toolbar: React.FC<ToolbarProps> = ({
       <button onClick={onAddButton} className="toolbar-button toolbar-add" disabled={!canAddButton} data-title="Add Button">
         + Button
       </button>
+
+      {/* Windows-only Settings button with drop-down */}
+      {isWindows && <ToolbarSettingsDropdown onSettings={onSettings} onAbout={onAbout} />}
+    </div>
+  );
+};
+
+// Windows-only settings dropdown with click-to-open and click-outside-to-close
+const ToolbarSettingsDropdown: React.FC<{ onSettings?: () => void; onAbout?: () => void }> = ({ onSettings, onAbout }) => {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  const handleSettingsClick = () => {
+    setOpen(false);
+    onSettings?.();
+  };
+
+  const handleAboutClick = () => {
+    setOpen(false);
+    onAbout?.();
+  };
+
+  return (
+    <div className="toolbar-settings-dropdown" ref={dropdownRef}>
+      <button
+        className="toolbar-button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        ⚙️
+      </button>
+      {open && (
+        <div className="toolbar-settings-menu">
+          <div className="toolbar-settings-menu-item">
+            <button onClick={handleSettingsClick}>Settings</button>
+          </div>
+          <div className="toolbar-settings-menu-item">
+            <button onClick={handleAboutClick}>About</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
