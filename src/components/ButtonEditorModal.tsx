@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { join } from '@tauri-apps/api/path';
-import { convertFileSrc } from '@tauri-apps/api/core';
+import { toAssetUrl, getButtonAssetUrl } from '../utils/assetPaths';
 import { VcpButtonDefinition, createDefaultButton, generateButtonXML, validateButton, parseButtonXML } from '../buttonDefinition';
 import { SKIN_EVENTS, PLC_INPUTS } from '../vcpEventData';
 import './ButtonEditorModal.css';
@@ -199,7 +199,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
 
       // Check if SVG already exists and set preview
       const imagePath = `${folder}/${sanitizedName}.svg`;
-      const previewSrc = convertFileSrc(imagePath);
+      const previewSrc = toAssetUrl(imagePath);
       setPreviewImageSrc(previewSrc);
       // preview image path prepared
 
@@ -256,7 +256,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
         // Update preview with cache-busting timestamp to force reload
         const imagePath = `${buttonFolder}/${filename}`;
         const cacheBuster = `?t=${Date.now()}`;
-        setPreviewImageSrc(convertFileSrc(imagePath) + cacheBuster);
+        setPreviewImageSrc(toAssetUrl(imagePath) + cacheBuster);
       }
     } catch (error) {
       console.error('Failed to browse image:', error);
@@ -289,8 +289,8 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
         imageName = buttonDef.defaultImage || `${sanitizedName}.svg`;
     }
 
-    const imagePath = `${buttonFolder}/${imageName}`;
-    setPreviewImageSrc(convertFileSrc(imagePath));
+    const imagePath = getButtonAssetUrl(vcpResourcesFolder, sanitizedName, imageName);
+    setPreviewImageSrc(imagePath);
   };
 
   const handleSave = async () => {

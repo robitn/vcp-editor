@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { VcpDocument, Selection } from "../types";
 import { GridSettings } from "../settingsTypes";
+import { getImageUrl, getButtonAssetUrl } from "../utils/assetPaths";
 import "./VcpGrid.css";
 
 interface VcpGridProps {
@@ -71,6 +71,8 @@ const VcpGrid: React.FC<VcpGridProps> = ({
     const row = Math.floor(y / (CELL_SIZE + CELL_SPACING)) + 1;
     return { row, col };
   };
+
+  // Path utilities are now imported from utils/assetPaths.ts
 
   // Calculate luminance of a color and return contrasting highlight color
   const getContrastColor = (bgColor: string): string => {
@@ -615,11 +617,8 @@ const VcpGrid: React.FC<VcpGridProps> = ({
 
       // Extract image name from path (filename without extension)
       const imageName = image.path.split(/[/\\]/).pop()?.replace(/\.[^/.]+$/, '') || '';
-      // Construct path to image SVG: vcpResourcesFolder/images/imageName.svg
-      const imageFilePath = vcpResourcesFolder
-        ? `${vcpResourcesFolder}/images/${imageName}.svg`
-        : '';
-      const imageSrc = imageFilePath ? convertFileSrc(imageFilePath) : '';
+      // Use shared utility to get image URL
+      const imageSrc = getImageUrl(vcpResourcesFolder, imageName);
 
       return (
         <div
@@ -644,7 +643,7 @@ const VcpGrid: React.FC<VcpGridProps> = ({
               onLoad={() => { /* image loaded */ }}
               onError={async (e) => {
                 const fullPath = `${vcpResourcesFolder}/images/${imageName}.svg`;
-                console.error('Failed to load image:', imageName, 'path:', imageSrc);
+                console.error('Failed to load image:', imageName, 'origPath:', fullPath, 'assetSrc:', imageSrc);
 
                 // Check file validity
                 try {
@@ -706,10 +705,9 @@ const VcpGrid: React.FC<VcpGridProps> = ({
       // Construct path to button SVG using default_image from XML if available
       // Otherwise fall back to buttonName.svg
       const imageName = button.default_image || `${button.name}.svg`;
-      const buttonImagePath = isConfigured && vcpResourcesFolder
-        ? `${vcpResourcesFolder}/Buttons/${button.name}/${imageName}`
+      const buttonImageSrc = isConfigured
+        ? getButtonAssetUrl(vcpResourcesFolder, button.name, imageName)
         : '';
-      const buttonImageSrc = buttonImagePath ? convertFileSrc(buttonImagePath) : '';
 
       // If button has SVG, it will render with border from SVG, so no border/background needed
       const hasSvg = isConfigured && buttonImageSrc;
