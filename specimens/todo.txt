@@ -48,16 +48,25 @@ Enhance:
 ✅     - Add "Save As" toolbar button (icon begins with saveas_) and wire into 'Save As' functionality.
 
 Windows Bugs!
-    - Menu key shortcuts are not working on Windows
-    - Newly opened window not resizing to the values stored in App support folder.
-    - Button Editor: can't add optional buttons - path name contains forward slashes.
+✅    - Menu key shortcuts are not working on Windows.
+✅    - Newly opened window not resizing to the values stored in App support folder.
+✅    - Button Editor: can't add optional buttons - path name contains a mix of back & forward slashes.
 
 Layout (Windows & MacOS): 
-        - Button Editor dialog doesn't fit smaller screens, eg, less than 1920x1080. 
-            - XML panel must be resizeable (height from bottom by way of a drag-bar) and that size stored in app support settings.json. Make XML preview scrollable.
-        - Reduce Button preview size to 160px square.
-        - Replace Toolbar setting button text character to svg image "settings-gear.svg. Use the same html structure as other toolbar buttons.
+✅    - Button Editor dialog doesn't fit smaller screens well, eg, less than 1920x1080. 
+        - Reconstruct XML preview and Button Appearance|Behavior into a resizeable horizontal split panel, with responsive animated drag-bar. XML preview also wants to be scrollable.
+✅    - Reduce Button preview size to 160px square.
+✅    - Replace Toolbar setting button text character to svg image publicicons\"settings-gear.svg". Use the same html structure as other toolbar buttons. Anchor settings button to toolbar right edge.
+Skip:    - Delete item wants a Delete symbol.
+✅    - Settings dialog > File: 
+        - change Vcp Resources span.help-text to "VCP folder containing new Buttons, Images, and skins folders"
+        - change label text from "Default save location" to "Work in progress folder".
+        - add <span.help-text to "Work in progress folder" - containing, "You will edit the files in this folder"
+✅    - Theme change between light to dark isn't complete, must update title bar and toolbar
 
+Change program logic / work flow: 
+✅    - vcpResourcesFolder is source of new images/buttons artwork from an outside source, if applicable; use as a hint for Open file dialog. "Work in progress" is the folder to copy images opened from vcp resources folder.
+✅    - If document isDirty flag was previously false and an edit makes isDirty true, then last Undo should set isDirty false, with window title indicating dirty or not state. If document isDirty flag was true, then last Undo should leave isDirty true.
 
 🛑 Later:
 Sort buttons by row then column.

@@ -66,7 +66,7 @@ export function getImagePath(
  * 
  * @param vcpResourcesFolder - Base VCP resources folder path
  * @param buttonName - Name of the button folder
- * @param fileName - Name of the file within the button folder
+ * @param fileName - Name of the file within the button folder (can be just filename or full path)
  * @returns Full filesystem path to the button asset
  */
 export function getButtonAssetPath(
@@ -75,7 +75,13 @@ export function getButtonAssetPath(
   fileName: string
 ): string {
   if (!vcpResourcesFolder || !buttonName || !fileName) return '';
-  return `${vcpResourcesFolder}/Buttons/${buttonName}/${fileName}`;
+  
+  // Extract filename if a full path was provided
+  const actualFileName = fileName.includes('/') || fileName.includes('\\') 
+    ? fileName.split(/[/\\]/).pop() || fileName
+    : fileName;
+  
+  return `${vcpResourcesFolder}/Buttons/${buttonName}/${actualFileName}`;
 }
 
 /**

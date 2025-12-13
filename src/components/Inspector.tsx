@@ -379,9 +379,9 @@ const Inspector: React.FC<InspectorProps> = ({
             newFilename: filename,
           });
 
-          // Store just the filename (without path)
-          const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
-          updateImage({ path: nameWithoutExt });
+          // Store relative path only
+          const relativePath = `images/${filename}`;
+          updateImage({ path: relativePath });
           onShowNotification?.(`Image copied to images folder`, 'success');
         }
       } catch (error) {
@@ -399,7 +399,7 @@ const Inspector: React.FC<InspectorProps> = ({
             type="text"
             value={image.path}
             onChange={(e) => updateImage({ path: e.target.value })}
-            placeholder="Path to SVG file"
+            placeholder="images/filename.svg"
           />
           <button className="browse-button" onClick={handleBrowseImage}>Browse...</button>
         </div>

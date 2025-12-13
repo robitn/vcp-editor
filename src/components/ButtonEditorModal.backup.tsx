@@ -4,7 +4,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { join } from '@tauri-apps/api/path';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { VcpButtonDefinition, createDefaultButton, generateButtonXML, validateButton, parseButtonXML } from '../buttonDefinition';
-import { SKIN_EVENTS, PLC_INPUTS } from '../vcpEventData';
+import { SKIN_EVENTS } from '../vcpEventData';
 import './ButtonEditorModal.css';
 
 interface ButtonEditorModalProps {

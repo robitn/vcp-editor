@@ -26,6 +26,7 @@ export interface FileSettings {
   autoOpenLastFile: boolean;
   defaultSaveLocation: string;
   vcpResourcesFolder: string; // Path to vcp root folder containing Buttons, Images, and skins
+  cncBasePath: string; // CNC deployment path (e.g., "C:\\cncm\\resources\\vcp")
 }
 
 export interface AppSettings {
@@ -59,6 +60,7 @@ export const defaultSettings: AppSettings = {
     autoOpenLastFile: true,
     defaultSaveLocation: '',
     vcpResourcesFolder: '',
+    cncBasePath: 'C:\\cncm\\resources\\vcp',
   },
   attributions: [],
 };

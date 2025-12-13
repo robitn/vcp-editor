@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { VcpDocument, Selection } from "../types";
 import { GridSettings } from "../settingsTypes";
 import { getImageUrl, getButtonAssetUrl } from "../utils/assetPaths";
+import { useMenu, MenuItem } from "../utils/MenuService";
 import "./VcpGrid.css";
 
 interface VcpGridProps {
@@ -54,7 +55,8 @@ const VcpGrid: React.FC<VcpGridProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
   const [resizeStart, setResizeStart] = useState<{ row: number; col: number; rowSpan: number; colSpan: number } | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; selection: Selection | null } | null>(null);
+
+  const { showContextMenu } = useMenu();
 
   const gridWidth = document.column_count * (CELL_SIZE + CELL_SPACING) - CELL_SPACING;
   const gridHeight = document.row_count * (CELL_SIZE + CELL_SPACING) - CELL_SPACING;
@@ -615,8 +617,15 @@ const VcpGrid: React.FC<VcpGridProps> = ({
       const imageLeft = pos.x + margin;
       const imageTop = pos.y + margin;
 
-      // Extract image name from path (filename without extension)
-      const imageName = image.path.split(/[/\\]/).pop()?.replace(/\.[^/.]+$/, '') || '';
+      // Extract image name from path (handle both absolute paths and relative paths)
+      let imageName = image.path;
+      // If it's an absolute path, extract just the filename
+      if (image.path.includes('/') || image.path.includes('\\')) {
+        imageName = image.path.split(/[/\\]/).pop() || '';
+      }
+      // Remove extension if present
+      imageName = imageName.replace(/\.[^/.]+$/, '');
+      
       // Use shared utility to get image URL
       const imageSrc = getImageUrl(vcpResourcesFolder, imageName);
 
@@ -950,53 +959,25 @@ const VcpGrid: React.FC<VcpGridProps> = ({
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    // const rect = e.currentTarget.getBoundingClientRect();
-    // const x = e.clientX - rect.left - OUTER_MARGIN;
-    // const y = e.clientY - rect.top - OUTER_MARGIN;
 
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      selection: selection,
-    });
+    const menuItems: MenuItem[] = selection?.type === 'empty' ? [
+      { id: 'add-border', label: 'Border', onClick: () => onAddBorder?.() },
+      { id: 'add-image', label: 'Image', onClick: () => onAddImage?.() },
+      { id: 'add-button', label: 'Button', onClick: () => onAddButton?.() },
+      { id: 'separator-1', label: '', separator: true },
+      { id: 'paste', label: 'Paste', disabled: !canPaste, onClick: () => onPaste?.() },
+    ] : [
+      { id: 'add-border', label: 'Border', onClick: () => onAddBorder?.() },
+      { id: 'separator-1', label: '', separator: true },
+      { id: 'cut', label: 'Cut', onClick: () => onCut?.() },
+      { id: 'copy', label: 'Copy', onClick: () => onCopy?.() },
+      { id: 'paste', label: 'Paste', disabled: !canPaste, onClick: () => onPaste?.() },
+      { id: 'separator-2', label: '', separator: true },
+      { id: 'delete', label: 'Delete', onClick: () => onDelete?.() },
+    ];
+
+    showContextMenu(menuItems, { x: e.clientX, y: e.clientY });
   };
-
-  const handleContextMenuAction = (action: string) => {
-    setContextMenu(null);
-
-    switch (action) {
-      case 'add-border':
-        onAddBorder?.();
-        break;
-      case 'add-image':
-        onAddImage?.();
-        break;
-      case 'add-button':
-        onAddButton?.();
-        break;
-      case 'cut':
-        onCut?.();
-        break;
-      case 'copy':
-        onCopy?.();
-        break;
-      case 'paste':
-        onPaste?.();
-        break;
-      case 'delete':
-        onDelete?.();
-        break;
-    }
-  };
-
-  // Close context menu when clicking elsewhere
-  React.useEffect(() => {
-    if (contextMenu) {
-      const handleClick = () => setContextMenu(null);
-      window.addEventListener('click', handleClick);
-      return () => window.removeEventListener('click', handleClick);
-    }
-  }, [contextMenu]);
 
   return (
     <div className="vcp-grid-container">
@@ -1031,63 +1012,6 @@ const VcpGrid: React.FC<VcpGridProps> = ({
           {renderResizeHandles()}
         </div>
       </div>
-      {contextMenu && (
-        <div
-          className="context-menu"
-          style={{
-            position: 'fixed',
-            left: contextMenu.x,
-            top: contextMenu.y,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {contextMenu.selection?.type === 'empty' ? (
-            <>
-              <button className="context-menu-item" onClick={() => handleContextMenuAction('add-border')}>
-                Border
-              </button>
-              <button className="context-menu-item" onClick={() => handleContextMenuAction('add-image')}>
-                Image
-              </button>
-              <button className="context-menu-item" onClick={() => handleContextMenuAction('add-button')}>
-                Button
-              </button>
-              <div className="context-menu-separator" />
-              <button
-                className="context-menu-item"
-                onClick={() => handleContextMenuAction('paste')}
-                disabled={!canPaste}
-              >
-                Paste
-              </button>
-            </>
-          ) : (
-            <>
-              <button className="context-menu-item" onClick={() => handleContextMenuAction('add-border')}>
-                Border
-              </button>
-              <div className="context-menu-separator" />
-              <button className="context-menu-item" onClick={() => handleContextMenuAction('cut')}>
-                Cut
-              </button>
-              <button className="context-menu-item" onClick={() => handleContextMenuAction('copy')}>
-                Copy
-              </button>
-              <button
-                className="context-menu-item"
-                onClick={() => handleContextMenuAction('paste')}
-                disabled={true}
-              >
-                Paste
-              </button>
-              <div className="context-menu-separator" />
-              <button className="context-menu-item" onClick={() => handleContextMenuAction('delete')}>
-                Delete
-              </button>
-            </>
-          )}
-        </div>
-      )}
     </div>
   );
 };

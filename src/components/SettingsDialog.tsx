@@ -216,7 +216,7 @@ export default function SettingsDialog({ settings, onSave, onCancel, onChange }:
                 </div>
 
                 <div className="setting-row">
-                  <label className="noninteractive">Default save location</label>
+                  <label className="noninteractive">Work in progress folder</label>
                   <div className="folder-input-group">
                     <input type="text" value={localSettings.files.defaultSaveLocation} onChange={(e) => updateFileSetting('defaultSaveLocation', e.target.value)} placeholder="Leave empty for system default" />
                     <button className="folder-browse-button" onClick={async () => {
@@ -227,6 +227,7 @@ export default function SettingsDialog({ settings, onSave, onCancel, onChange }:
                       if (selected) updateFileSetting('defaultSaveLocation', selected as string);
                     }}>Browse...</button>
                   </div>
+                  <span className="help-text">You will edit the files in this folder</span>
                 </div>
 
                 <div className="setting-row">
@@ -241,7 +242,21 @@ export default function SettingsDialog({ settings, onSave, onCancel, onChange }:
                       if (selected) updateFileSetting('vcpResourcesFolder', selected as string);
                     }}>Browse...</button>
                   </div>
-                  <span className="help-text">Root folder containing Buttons, Images, and VCP skins subdirectories</span>
+                  <span className="help-text">VCP folder containing new Buttons, Images, and skins folders</span>
+                </div>
+
+                <div className="setting-row">
+                  <label>CNC base path</label>
+                  <div className="folder-input-group">
+                    <input type="text" value={localSettings.files.cncBasePath} onChange={(e) => updateFileSetting('cncBasePath', e.target.value)} placeholder="CNC deployment path (e.g., C:\cncm\resources\vcp)" />
+                    <button className="folder-browse-button" onClick={async () => {
+                      const { open } = await import('@tauri-apps/plugin-dialog');
+                      const defaultPath = localSettings.files.cncBasePath || 'C:\\cncm\\resources\\vcp';
+                      const selected = await open({ directory: true, multiple: false, title: 'Select CNC Base Path', defaultPath });
+                      if (selected) updateFileSetting('cncBasePath', selected as string);
+                    }}>Browse...</button>
+                  </div>
+                  <span className="help-text">Path where VCP files are deployed on the CNC machine</span>
                 </div>
 
                 <div className="settings-divider" />

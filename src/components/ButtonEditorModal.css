@@ -150,8 +150,8 @@
 }
 
 .button-preview-canvas {
-    width: 240px;
-    height: 240px;
+    width: 160px;
+    height: 160px;
     margin: 0 auto 16px;
     border: 2px solid #ddd;
     border-radius: 8px;
@@ -201,19 +201,49 @@
 
 .button-editor-middle {
     display: flex;
+    flex-direction: column;
     flex: 1;
     overflow: hidden;
 }
 
 .button-editor-left-panel,
 .button-editor-right-panel {
-    flex: 1;
     padding: 20px;
     overflow-y: auto;
 }
 
 .button-editor-left-panel {
-    border-right: 1px solid #ddd;
+    flex: 0 0 40%;
+    border-bottom: 1px solid #ddd;
+}
+
+.button-editor-right-panel {
+    flex: 0 0 60%;
+}
+
+.button-editor-split-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.button-editor-left-split,
+.button-editor-right-split {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.button-editor-resizer {
+    width: 5px;
+    background-color: #ccc;
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background-color 0.2s;
+}
+
+.button-editor-resizer:hover {
+    background-color: #999;
 }
 
 .button-editor-left-panel h3,
@@ -273,7 +303,8 @@
     background-color: #fafafa;
     display: flex;
     flex-direction: column;
-    max-height: 400px;
+    flex: 1;
+    overflow: hidden;
 }
 
 .xml-preview-header {
@@ -911,4 +942,12 @@
 
 .theme-dark .editor-button-default:hover {
     background-color: #4e4e4e;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 1919px) {
+    .button-editor-modal.expanded {
+        width: 95vw;
+        height: 95vh;
+    }
 }

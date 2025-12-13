@@ -74,6 +74,14 @@
     background-color: #004494;
 }
 
+.toolbar-settings {
+    margin-left: auto;
+}
+
+.toolbar-settings::after {
+    opacity: 0!important;
+}
+
 /* Custom tooltips */
 .toolbar-button::after {
     content: attr(data-title);
@@ -94,16 +102,6 @@
 }
 
 .toolbar-button:hover::after {
-    opacity: 1;
-}
-
-/* Hide tooltip for settings button */
-.toolbar-settings-dropdown .toolbar-button::after {
-    display: none;
-}
-
-/* Debug: Keep settings button tooltip visible for inspection */
-.toolbar-settings-dropdown .toolbar-button::after {
     opacity: 1;
 }
 

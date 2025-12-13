@@ -2,6 +2,7 @@ mod backend;
 
 use backend::models::VcpDocument;
 use backend::parser::{load_file, save_file};
+use std::path::Path;
 use std::sync::Mutex;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{Emitter, State};
@@ -53,21 +54,23 @@ async fn print_window(app: tauri::AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 fn create_button_folder(
-    vcp_resources_folder: String,
+    base_path: String,
     button_name: String,
 ) -> Result<String, String> {
     use std::fs;
     use std::path::Path;
 
-    let button_folder = format!("{}/Buttons/{}", vcp_resources_folder, button_name);
-    let path = Path::new(&button_folder);
+    let button_folder = Path::new(&base_path)
+        .join("Buttons")
+        .join(&button_name);
 
     // Create folder if it doesn't exist, or just return existing path
-    if !path.exists() {
-        fs::create_dir_all(path).map_err(|e| format!("Failed to create button folder: {}", e))?;
+    if !button_folder.exists() {
+        fs::create_dir_all(&button_folder)
+            .map_err(|e| format!("Failed to create button folder: {}", e))?;
     }
 
-    Ok(button_folder)
+    Ok(button_folder.to_string_lossy().to_string())
 }
 
 #[tauri::command]
@@ -92,61 +95,65 @@ fn ensure_vcp_folder_structure(base_path: String) -> Result<(), String> {
 
 #[tauri::command]
 fn export_to_cnc(
-    default_save_location: String,
-    _vcp_resources_folder: String,
-    output_path: String,
-) -> Result<(), String> {
+    vcp_resources_folder: String,
+    cnc_base_path: String,
+    vcp_content: String,
+) -> Result<String, String> {
     use std::fs;
     use std::io::{Read, Write};
     use std::path::Path;
     use zip::write::FileOptions;
     use zip::ZipWriter;
 
-    let base_path = Path::new(&default_save_location);
+    // Convert relative image paths to absolute CNC paths
+    let converted_content = vcp_content.replace(
+        "<path>images/",
+        &format!("<path>{}/images/", cnc_base_path.replace("\\", "/"))
+    );
 
-    // Get the folder name to use as zip root
-    let folder_name = base_path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("vcp-export");
+    // Create temp directory for export
+    let temp_dir = std::env::temp_dir().join("vcp_cnc_export");
+    fs::create_dir_all(&temp_dir).map_err(|e| format!("Failed to create temp dir: {}", e))?;
 
-    // Create zip file
-    let file =
-        fs::File::create(&output_path).map_err(|e| format!("Failed to create zip file: {}", e))?;
+    // Copy VCP folder structure to temp
+    let vcp_source = Path::new(&vcp_resources_folder);
+    let vcp_dest = temp_dir.join("vcp");
+
+    // Copy all files and folders
+    copy_dir_recursive(vcp_source, &vcp_dest)?;
+
+    // Write converted VCP file
+    let vcp_file_path = vcp_dest.join("skins").join("acorn_mill_vcp_skin.vcp");
+    fs::write(&vcp_file_path, converted_content)
+        .map_err(|e| format!("Failed to write VCP file: {}", e))?;
+
+    // Create zip file in CNC directory
+    let zip_filename = format!("vcp_export_{}.zip", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
+    let zip_path = Path::new(&cnc_base_path).join(&zip_filename);
+    let file = fs::File::create(&zip_path)
+        .map_err(|e| format!("Failed to create zip file: {}", e))?;
+    
     let mut zip = ZipWriter::new(file);
     let options = FileOptions::<()>::default().compression_method(zip::CompressionMethod::Deflated);
 
-    // Walk the entire defaultSaveLocation folder recursively
-    let walker = walkdir::WalkDir::new(base_path)
+    // Add all files from temp directory to zip
+    let walker = walkdir::WalkDir::new(&temp_dir)
         .into_iter()
         .filter_map(|e| e.ok());
 
     for entry in walker {
         let path = entry.path();
-
-        // Skip the root directory itself
-        if path == base_path {
-            continue;
-        }
-
         if path.is_file() {
-            // Get relative path from base_path
-            let name = path
-                .strip_prefix(base_path)
+            let name = path.strip_prefix(&temp_dir)
                 .map_err(|e| format!("Path strip error: {}", e))?;
 
-            // Build zip path with folder name prefix
-            let zip_path = format!("{}/{}", folder_name, name.to_string_lossy());
-
-            // Add file to zip
-            zip.start_file(&zip_path, options)
+            zip.start_file(name.to_string_lossy(), options)
                 .map_err(|e| format!("Failed to add file to zip: {}", e))?;
 
-            let mut file_data =
-                fs::File::open(path).map_err(|e| format!("Failed to open file: {}", e))?;
+            let mut file_data = fs::File::open(path)
+                .map_err(|e| format!("Failed to open file: {}", e))?;
             let mut buffer = Vec::new();
-            file_data
-                .read_to_end(&mut buffer)
+            file_data.read_to_end(&mut buffer)
                 .map_err(|e| format!("Failed to read file: {}", e))?;
             zip.write_all(&buffer)
                 .map_err(|e| format!("Failed to write to zip: {}", e))?;
@@ -155,6 +162,33 @@ fn export_to_cnc(
 
     zip.finish()
         .map_err(|e| format!("Failed to finalize zip: {}", e))?;
+
+    // Clean up temp directory
+    fs::remove_dir_all(&temp_dir)
+        .map_err(|e| format!("Failed to clean up temp dir: {}", e))?;
+
+    Ok(zip_path.to_string_lossy().to_string())
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
+    use std::fs;
+    
+    if !dst.exists() {
+        fs::create_dir_all(dst).map_err(|e| format!("Failed to create dir {}: {}", dst.display(), e))?;
+    }
+    
+    for entry in fs::read_dir(src).map_err(|e| format!("Failed to read dir {}: {}", src.display(), e))? {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        
+        if src_path.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else {
+            fs::copy(&src_path, &dst_path).map_err(|e| format!("Failed to copy {} to {}: {}", src_path.display(), dst_path.display(), e))?;
+        }
+    }
+    
     Ok(())
 }
 
@@ -165,21 +199,24 @@ fn save_button_xml(
     xml_content: String,
 ) -> Result<(), String> {
     use std::fs;
+    use std::path::Path;
 
-    let xml_path = format!("{}/{}.xml", button_folder, button_name);
+    let xml_path = Path::new(&button_folder).join(format!("{}.xml", button_name));
     fs::write(&xml_path, xml_content).map_err(|e| format!("Failed to write button XML: {}", e))?;
 
     Ok(())
 }
 
 #[tauri::command]
-fn load_button_xml(vcp_resources_folder: String, button_name: String) -> Result<String, String> {
+fn load_button_xml(base_path: String, button_name: String) -> Result<String, String> {
     use std::fs;
+    use std::path::Path;
 
-    let xml_path = format!(
-        "{}/Buttons/{}/{}.xml",
-        vcp_resources_folder, button_name, button_name
-    );
+    let xml_path = Path::new(&base_path)
+        .join("Buttons")
+        .join(&button_name)
+        .join(format!("{}.xml", button_name));
+
     fs::read_to_string(&xml_path).map_err(|e| format!("Failed to read button XML: {}", e))
 }
 
@@ -191,8 +228,9 @@ fn copy_file_to_button_folder(
 ) -> Result<String, String> {
     use std::fs;
     use std::io::Write;
+    use std::path::Path;
 
-    let dest_path = format!("{}/{}", button_folder, new_filename);
+    let dest_path = Path::new(&button_folder).join(&new_filename);
 
     // Read source file completely into memory
     let data = fs::read(&source_path)
@@ -208,19 +246,20 @@ fn copy_file_to_button_folder(
 
     // Write to destination
     let mut file = fs::File::create(&dest_path)
-        .map_err(|e| format!("Failed to create destination file '{}': {}", dest_path, e))?;
+        .map_err(|e| format!("Failed to create destination file '{}': {}", dest_path.display(), e))?;
 
     file.write_all(&data)
-        .map_err(|e| format!("Failed to write to destination file '{}': {}", dest_path, e))?;
+        .map_err(|e| format!("Failed to write to destination file '{}': {}", dest_path.display(), e))?;
 
-    Ok(dest_path)
+    Ok(dest_path.to_string_lossy().to_string())
 }
 
 #[tauri::command]
 fn list_existing_buttons(vcp_resources_folder: String) -> Result<Vec<String>, String> {
     use std::fs;
+    use std::path::Path;
 
-    let buttons_dir = format!("{}/Buttons", vcp_resources_folder);
+    let buttons_dir = Path::new(&vcp_resources_folder).join("Buttons");
     let entries = fs::read_dir(&buttons_dir)
         .map_err(|e| format!("Failed to read Buttons directory: {}", e))?;
 
@@ -239,6 +278,11 @@ fn list_existing_buttons(vcp_resources_folder: String) -> Result<Vec<String>, St
 
     buttons.sort();
     Ok(buttons)
+}
+
+#[tauri::command]
+fn serialize_vcp_document(doc: VcpDocument) -> Result<String, String> {
+    Ok(backend::parser::serialize_vcp(&doc))
 }
 
 #[tauri::command]
@@ -268,6 +312,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             // Create menu items
             let new_item = MenuItem::with_id(app, "new", "New", true, Some("CmdOrCtrl+N"))?;
@@ -284,20 +329,37 @@ pub fn run() {
                 MenuItem::with_id(app, "export_cnc", "Export to CNC...", true, None::<&str>)?;
             let print_item =
                 MenuItem::with_id(app, "print", "Print...", true, Some("CmdOrCtrl+P"))?;
+            // Use platform-specific labels for Settings
+            #[cfg(target_os = "macos")]
             let settings_item =
                 MenuItem::with_id(app, "settings", "Settings...", true, Some("CmdOrCtrl+,"))?;
+            #[cfg(not(target_os = "macos"))]
+            let _settings_item =
+                MenuItem::with_id(app, "settings", "Settings", true, Some("CmdOrCtrl+,"))?;
+
+            // Use platform-specific labels: "Quit" for macOS, "Exit" for Windows
+            #[cfg(target_os = "macos")]
             let quit_item =
                 MenuItem::with_id(app, "quit", "Quit VCP Editor", true, Some("CmdOrCtrl+Q"))?;
+            #[cfg(not(target_os = "macos"))]
+            let quit_item =
+                MenuItem::with_id(app, "quit", "Exit", true, Some("CmdOrCtrl+Q"))?;
+
+            // Use platform-specific labels for About
+            #[cfg(target_os = "macos")]
             let about_item =
                 MenuItem::with_id(app, "about", "About VCP Editor", true, None::<&str>)?;
+            #[cfg(not(target_os = "macos"))]
+            let _about_item =
+                MenuItem::with_id(app, "about", "About", true, None::<&str>)?;
 
             // View menu items
             let refresh_images_item =
-                MenuItem::with_id(app, "refresh_images", "Refresh Images", true, None::<&str>)?;
+                MenuItem::with_id(app, "refresh_images", "Refresh Images", true, Some("CmdOrCtrl+R"))?;
             let zoom_in_item =
-                MenuItem::with_id(app, "zoom_in", "Zoom In", true, Some("CmdOrCtrl+Equal"))?;
+                MenuItem::with_id(app, "zoom_in", "Zoom In", true, Some("CmdOrCtrl+="))?;
             let zoom_out_item =
-                MenuItem::with_id(app, "zoom_out", "Zoom Out", true, Some("CmdOrCtrl+Minus"))?;
+                MenuItem::with_id(app, "zoom_out", "Zoom Out", true, Some("CmdOrCtrl+-"))?;
             let toggle_grid_item = MenuItem::with_id(
                 app,
                 "toggle_grid",
@@ -555,7 +617,8 @@ pub fn run() {
             load_button_xml,
             copy_file_to_button_folder,
             list_existing_buttons,
-            check_svg_file
+            check_svg_file,
+            serialize_vcp_document
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -5,6 +5,7 @@ import { Store } from "@tauri-apps/plugin-store";
 import { getCurrentWindow, LogicalPosition, LogicalSize } from "@tauri-apps/api/window";
 import { dirname, homeDir, join } from "@tauri-apps/api/path";
 import { listen } from "@tauri-apps/api/event";
+import { copyFile, mkdir } from "@tauri-apps/plugin-fs";
 import "./App.css";
 import "./components/AboutDialog.css";
 import { VcpDocument, Selection } from "./types";
@@ -19,6 +20,7 @@ import AboutDialog from "./components/AboutDialog";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { UndoRedoManager } from "./undoRedo";
 import { AppSettings, defaultSettings } from "./settingsTypes";
+import { useMenu, Menu } from "./utils/MenuService";
 
 interface WindowState {
   x: number;
@@ -44,6 +46,8 @@ function App() {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [imageCacheBuster, setImageCacheBuster] = useState(Date.now());
   const unsavedDialogResolve = useRef<((result: UnsavedChangesResult) => void) | null>(null);
+
+  const { menuState, hideMenu } = useMenu();
 
   // Read package version from Vite env (set via npm script as VITE_APP_VERSION)
   const appVersion = (import.meta as any).env?.VITE_APP_VERSION ?? '';
@@ -166,6 +170,9 @@ function App() {
           // no saved window state
         }
 
+        // Show the window after state is restored
+        await appWindow.show();
+
         // Try to open last file
         const lastFilePath = await store.current.get<string>('lastFilePath');
         if (lastFilePath && typeof lastFilePath === 'string') {
@@ -176,6 +183,7 @@ function App() {
             setIsDirty(false);
             setSelection(null);
             undoRedoManager.current.clear();
+            undoRedoManager.current.markAsSaved();
             updateUndoRedoState();
             showNotification('Last file reopened', 'success');
             console.log('Last file opened successfully');
@@ -191,6 +199,7 @@ function App() {
             setIsDirty(false);
             setSelection(null);
             undoRedoManager.current.clear();
+            undoRedoManager.current.markAsSaved();
             updateUndoRedoState();
           }
         } else {
@@ -201,6 +210,7 @@ function App() {
           setIsDirty(false);
           setSelection(null);
           undoRedoManager.current.clear();
+          undoRedoManager.current.markAsSaved();
           updateUndoRedoState();
         }
       } catch (error) {
@@ -249,7 +259,7 @@ function App() {
 
       try {
         const position = await appWindow.outerPosition();
-        const size = await appWindow.outerSize();
+        const size = await appWindow.innerSize();
 
         const windowState: WindowState = {
           x: position.x,
@@ -298,24 +308,29 @@ function App() {
         return;
       }
 
-      // Prevent close if any dialogs are open - close them first
-      if (showSettingsDialog || showButtonEditor) {
-        event.preventDefault();
-        setShowSettingsDialog(false);
-        setShowButtonEditor(false);
-        return;
-      }
-
-      // If there are no unsaved changes, allow close
-      if (!isDirty) {
-        return;
-      }
-
-      // We have unsaved changes, prevent and show dialog
-      event.preventDefault();
       isProcessing = true;
 
       try {
+        // Close any open dialogs first
+        if (showSettingsDialog) {
+          setShowSettingsDialog(false);
+          // Allow time for state update
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        if (showButtonEditor) {
+          setShowButtonEditor(false);
+          // Allow time for state update
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+
+        // If there are no unsaved changes after closing dialogs, allow close
+        if (!isDirty) {
+          return;
+        }
+
+        // We have unsaved changes, prevent close and show dialog
+        event.preventDefault();
+
         const result = await showUnsavedChangesDialog('close');
 
         if (result === 'cancel') {
@@ -331,7 +346,9 @@ function App() {
 
         // User approved close, set isDirty to false and close
         setIsDirty(false);
-        setTimeout(() => appWindow.close(), 100);
+        // Allow time for state update
+        await new Promise(resolve => setTimeout(resolve, 50));
+        appWindow.close();
       } finally {
         isProcessing = false;
       }
@@ -487,14 +504,52 @@ function App() {
       });
 
       if (filePath) {
-        const doc = await invoke<VcpDocument>("open_file", { path: filePath });
+        let finalFilePath = filePath as string;
+
+        // Check if file is from vcpResourcesFolder and copy to work in progress folder
+        if (settings.files.vcpResourcesFolder && settings.files.defaultSaveLocation) {
+          const vcpResourcesPath = settings.files.vcpResourcesFolder.toLowerCase();
+          const filePathLower = finalFilePath.toLowerCase();
+
+          if (filePathLower.startsWith(vcpResourcesPath)) {
+            // File is from vcpResourcesFolder, copy to work in progress folder
+            try {
+              // Ensure folder structure exists
+              await invoke('ensure_vcp_folder_structure', { basePath: settings.files.defaultSaveLocation });
+
+              // Create destination path in work in progress folder
+              const relativePath = finalFilePath.substring(settings.files.vcpResourcesFolder.length);
+              const destPath = await join(settings.files.defaultSaveLocation, relativePath);
+
+              // Ensure destination directory exists
+              const destDir = await dirname(destPath);
+              try {
+                await mkdir(destDir, { recursive: true });
+              } catch (error) {
+                // Directory might already exist, continue
+              }
+
+              // Copy the file
+              await copyFile(finalFilePath, destPath);
+
+              finalFilePath = destPath;
+              showNotification('File copied from VCP resources to work in progress folder', 'info');
+            } catch (error) {
+              console.warn('Failed to copy file from VCP resources:', error);
+              showNotification('Warning: Could not copy file to work in progress folder', 'warning');
+            }
+          }
+        }
+
+        const doc = await invoke<VcpDocument>("open_file", { path: finalFilePath });
         setDocument(doc);
-        setCurrentFilePath(filePath as string);
+        setCurrentFilePath(finalFilePath);
         setIsDirty(false);
         setSelection(null);
         undoRedoManager.current.clear();
+        undoRedoManager.current.markAsSaved();
         updateUndoRedoState();
-        await saveLastFilePath(filePath as string);
+        await saveLastFilePath(finalFilePath);
         showNotification('File opened successfully', 'success');
       }
     } catch (error) {
@@ -538,6 +593,7 @@ function App() {
       await invoke("save_file_command", { path, doc: document });
       setCurrentFilePath(path);
       setIsDirty(false);
+      undoRedoManager.current.markAsSaved();
       await saveLastFilePath(path);
       showNotification('File saved successfully', 'success');
       return true;
@@ -580,6 +636,7 @@ function App() {
       await invoke("save_file_command", { path: savePath, doc: document });
       setCurrentFilePath(savePath);
       setIsDirty(false);
+      undoRedoManager.current.markAsSaved();
       await saveLastFilePath(savePath);
       showNotification('File saved successfully', 'success');
     } catch (error) {
@@ -602,38 +659,31 @@ function App() {
     if (showSettingsDialog || showButtonEditor) return;
 
     try {
-      // Check that defaultSaveLocation is configured
-      if (!settings.files.defaultSaveLocation || settings.files.defaultSaveLocation.trim() === '') {
-        showNotification('Please configure Default save location in Settings before exporting', 'error');
+      // Check that CNC base path is configured
+      if (!settings.files.cncBasePath || settings.files.cncBasePath.trim() === '') {
+        showNotification('Please configure CNC base path in Settings > Files before exporting', 'error');
+        setShowSettingsDialog(true);
         return;
       }
 
-      // Generate date-based filename
-      const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      const defaultFilename = `VCP_Export_${date}.zip`;
-
-      // Show save dialog for export destination
-      const savePath = await save({
-        defaultPath: defaultFilename,
-        filters: [{
-          name: 'Zip Archive',
-          extensions: ['zip']
-        }]
-      });
-
-      if (!savePath) {
-        // User cancelled
+      // Check that VCP resources folder is configured
+      if (!settings.files.vcpResourcesFolder || settings.files.vcpResourcesFolder.trim() === '') {
+        showNotification('Please configure VCP resources folder in Settings > Files before exporting', 'error');
+        setShowSettingsDialog(true);
         return;
       }
 
-      // Call Rust export command
-      await invoke('export_to_cnc', {
-        defaultSaveLocation: settings.files.defaultSaveLocation,
+      // Generate VCP XML content
+      const vcpXml = await invoke<string>('serialize_vcp_document', { doc: document });
+
+      // Call Rust export command with path remapping
+      const result = await invoke<string>('export_to_cnc', {
         vcpResourcesFolder: settings.files.vcpResourcesFolder,
-        outputPath: savePath
+        cncBasePath: settings.files.cncBasePath,
+        vcpContent: vcpXml
       });
 
-      showNotification('VCP package exported successfully', 'success');
+      showNotification(`VCP package exported successfully to: ${result}`, 'success');
     } catch (error) {
       console.error('Export failed:', error);
       showNotification(`Export failed: ${error}`, 'error');
@@ -721,7 +771,9 @@ function App() {
     if (previousDoc) {
       setDocument(previousDoc);
       setSelection({ type: 'empty' }); // Clear selection since elements may have changed
-      setIsDirty(true);
+      // Check if we've undone back to the saved state
+      const isAtSaved = undoRedoManager.current.isAtSavedState();
+      setIsDirty(!isAtSaved);
       updateUndoRedoState();
     }
   };
@@ -732,6 +784,7 @@ function App() {
     if (nextDoc) {
       setDocument(nextDoc);
       setSelection({ type: 'empty' }); // Clear selection since elements may have changed
+      // Redo always makes the document dirty (we're moving away from saved state)
       setIsDirty(true);
       updateUndoRedoState();
     }
@@ -1061,12 +1114,52 @@ function App() {
         // Delete or Backspace: Delete element (but not when typing in text fields)
         e.preventDefault();
         handleDelete();
+      } else if (isMod && e.key === '=') {
+        // Cmd+= or Ctrl+=: Zoom In
+        e.preventDefault();
+        setSettings(prev => {
+          const newZoom = Math.min(prev.grid.cellZoom + 10, 200);
+          return {
+            ...prev,
+            grid: {
+              ...prev.grid,
+              cellZoom: newZoom
+            }
+          };
+        });
+      } else if (isMod && e.key === '-') {
+        // Cmd+- or Ctrl+-: Zoom Out
+        e.preventDefault();
+        setSettings(prev => {
+          const newZoom = Math.max(prev.grid.cellZoom - 10, 50);
+          return {
+            ...prev,
+            grid: {
+              ...prev.grid,
+              cellZoom: newZoom
+            }
+          };
+        });
+      } else if (isMod && e.key === 'g') {
+        // Cmd+G or Ctrl+G: Toggle Grid
+        e.preventDefault();
+        setSettings(prev => ({
+          ...prev,
+          grid: {
+            ...prev.grid,
+            showGridLines: !prev.grid.showGridLines
+          }
+        }));
+      } else if (isMod && e.key === 'r') {
+        // Cmd+R or Ctrl+R: Refresh Images
+        e.preventDefault();
+        setImageCacheBuster(Date.now());
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [document, handleUndo, handleRedo, handleCut, handleCopy, handlePaste, handleDelete]);
+  }, [handleUndo, handleRedo, handleCut, handleCopy, handlePaste, handleDelete]);
 
   if (!document) {
     return <div className="loading">Loading...</div>;
@@ -1224,6 +1317,17 @@ function App() {
           />
         </div>
       </div>
+
+      {/* Global Menu Component */}
+      {menuState.isOpen && menuState.position && (
+        <Menu
+          items={menuState.items}
+          position={menuState.position}
+          type={menuState.anchor ? 'dropdown' : 'context'}
+          alignment={menuState.alignment}
+          onClose={hideMenu}
+        />
+      )}
     </div>
   );
 }

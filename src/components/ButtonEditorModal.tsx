@@ -60,6 +60,8 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
   const [xmlPreview, setXmlPreview] = useState('');
   const [warnings, setWarnings] = useState<string[]>([]);
   const [previewState, setPreviewState] = useState<'default' | 'pressed' | 'output-on' | 'output-off' | 'input-active' | 'input-inactive'>('default');
+  const [splitRatio, setSplitRatio] = useState(50); // Percentage for left panel width
+  const [isResizing, setIsResizing] = useState(false);
 
   // Handle ESC key to close modal (acts as Cancel)
   useEffect(() => {
@@ -88,6 +90,36 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
       updatePreviewForState(previewState);
     }
   }, [buttonFolder, buttonDef, previewState, isExpanded]);
+
+  // Resize handlers for split panel
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsResizing(true);
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+    const container = document.querySelector('.button-editor-split-container') as HTMLElement;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const newRatio = ((e.clientX - rect.left) / rect.width) * 100;
+    setSplitRatio(Math.max(20, Math.min(80, newRatio))); // Clamp between 20% and 80%
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isResizing]);
 
   // Remove the auto-load behavior
   /*
@@ -158,12 +190,17 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
   };
 
   const handleCreateButton = async () => {
-    if (!sanitizedName || !vcpResourcesFolder) return;
+    if (!sanitizedName) return;
+    
+    // Use defaultSaveLocation (WIP folder) for creating new buttons
+    // Fall back to vcpResourcesFolder if defaultSaveLocation is not available
+    const basePath = defaultSaveLocation || vcpResourcesFolder;
+    if (!basePath) return;
 
     try {
       // Create button folder (or get existing)
       const folder = await invoke<string>('create_button_folder', {
-        vcpResourcesFolder,
+        basePath,
         buttonName: sanitizedName,
       });
 
@@ -175,7 +212,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
 
       try {
         const xml = await invoke<string>('load_button_xml', {
-          vcpResourcesFolder,
+          basePath,
           buttonName: sanitizedName,
         });
 
@@ -213,16 +250,16 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
 
   const handleBrowseImage = async () => {
     if (!buttonDef || !sanitizedName) return;
-    if (!buttonFolder && !defaultSaveLocation && !vcpResourcesFolder) return;
+    if (!defaultSaveLocation && !vcpResourcesFolder) return;
 
     try {
-      // Determine browse location
-      let defaultPath = buttonFolder;
+      // Determine browse location - prefer VCP Resources folder as source
+      let defaultPath = vcpResourcesFolder ? await join(vcpResourcesFolder, 'Buttons') : null;
       if (!defaultPath && defaultSaveLocation) {
         defaultPath = await join(defaultSaveLocation, 'Buttons');
-      } else if (!defaultPath && vcpResourcesFolder) {
-        defaultPath = await join(vcpResourcesFolder, 'Buttons');
       }
+
+      if (!defaultPath) return;
 
       const selected = await open({
         filters: [{ name: 'SVG Images', extensions: ['svg'] }],
@@ -233,8 +270,8 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
 
       if (selected) {
         const sourcePath = selected as string;
-        // Use button name for default image (CNC VCP requirement)
-        const filename = `${sanitizedName}.svg`;
+        // Use original filename for optional buttons (no name change)
+        const filename = sourcePath.split(/[/\\]/).pop() || 'unknown.svg';
 
         // copying file to button folder
 
@@ -252,6 +289,14 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
         setButtonDef(updated);
         setXmlPreview(generateButtonXML(updated));
         setWarnings(validateButton(updated));
+
+        // Save XML file to button folder immediately
+        const xml = generateButtonXML(updated);
+        await invoke('save_button_xml', {
+          buttonFolder,
+          buttonName: sanitizedName,
+          xmlContent: xml,
+        });
 
         // Update preview with cache-busting timestamp to force reload
         const imagePath = `${buttonFolder}/${filename}`;
@@ -289,8 +334,10 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
         imageName = buttonDef.defaultImage || `${sanitizedName}.svg`;
     }
 
-    const imagePath = getButtonAssetUrl(vcpResourcesFolder, sanitizedName, imageName);
-    setPreviewImageSrc(imagePath);
+    // Load preview from button folder (WIP destination, not source)
+    const imagePath = `${buttonFolder}/${imageName}`;
+    const cacheBuster = `?t=${Date.now()}`;
+    setPreviewImageSrc(toAssetUrl(imagePath) + cacheBuster);
   };
 
   const handleSave = async () => {
@@ -457,7 +504,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                   <div className="preview-placeholder">
                     Button Preview
                     <br />
-                    <small>240px × 240px</small>
+                    <small>160px × 160px</small>
                   </div>
                 )}
               </div>
@@ -524,7 +571,9 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
               </div>
             </div>
 
-            <div className="button-editor-middle">
+            <div className="button-editor-split-container">
+              <div className="button-editor-left-split" style={{ width: splitRatio + '%' }}>
+                <div className="button-editor-middle">
               <div className="button-editor-left-panel">
                 <h3>Appearance</h3>
                 <div className="editor-section">
@@ -562,7 +611,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                         });
                         if (selected) {
                           const sourcePath = selected as string;
-                          const filename = sourcePath.split('/').pop() || '';
+                          const filename = sourcePath.split(/[/\\]/).pop() || '';
                           await invoke('copy_file_to_button_folder', {
                             sourcePath,
                             buttonFolder,
@@ -913,7 +962,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                             });
                             if (selected) {
                               const sourcePath = selected as string;
-                              const filename = sourcePath.split('/').pop() || '';
+                              const filename = sourcePath.split(/[/\\]/).pop() || '';
                               await invoke('copy_file_to_button_folder', {
                                 sourcePath,
                                 buttonFolder,
@@ -960,7 +1009,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                             });
                             if (selected) {
                               const sourcePath = selected as string;
-                              const filename = sourcePath.split('/').pop() || '';
+                              const filename = sourcePath.split(/[/\\]/).pop() || '';
                               await invoke('copy_file_to_button_folder', {
                                 sourcePath,
                                 buttonFolder,
@@ -1055,7 +1104,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                             });
                             if (selected) {
                               const sourcePath = selected as string;
-                              const filename = sourcePath.split('/').pop() || '';
+                              const filename = sourcePath.split(/[/\\]/).pop() || '';
                               await invoke('copy_file_to_button_folder', {
                                 sourcePath,
                                 buttonFolder,
@@ -1102,7 +1151,7 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                             });
                             if (selected) {
                               const sourcePath = selected as string;
-                              const filename = sourcePath.split('/').pop() || '';
+                              const filename = sourcePath.split(/[/\\]/).pop() || '';
                               await invoke('copy_file_to_button_folder', {
                                 sourcePath,
                                 buttonFolder,
@@ -1127,8 +1176,10 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 )}
               </div>
             </div>
-
-            <div className="button-editor-bottom">
+            </div>
+              <div className="button-editor-resizer" onMouseDown={handleMouseDown}></div>
+              <div className="button-editor-right-split" style={{ width: (100 - splitRatio) + '%' }}>
+                <div className="button-editor-bottom">
               <div className="xml-preview-header">
                 <h4>XML Preview</h4>
                 {warnings.length > 0 && (
@@ -1140,6 +1191,8 @@ export default function ButtonEditorModal({ onClose, onSave, vcpResourcesFolder,
                 )}
               </div>
               <pre className="xml-preview-content" dangerouslySetInnerHTML={{ __html: highlightXML(xmlPreview) }} />
+            </div>
+              </div>
             </div>
 
             <div className="button-editor-footer">

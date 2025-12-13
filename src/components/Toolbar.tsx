@@ -1,9 +1,9 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef } from "react";
 
 // Global constant to detect if running on Windows
 import { isWindows } from "../utils/platform";
+import { useMenu, MenuItem } from "../utils/MenuService";
 import "./Toolbar.css";
-import "./ContextMenu.css";
 
 interface ToolbarProps {
   onNew: () => void;
@@ -109,56 +109,33 @@ const Toolbar: React.FC<ToolbarProps> = ({
   );
 };
 
-// Windows-only settings dropdown with click-to-open and click-outside-to-close
+// Windows-only settings dropdown using centralized menu service
 const ToolbarSettingsDropdown: React.FC<{ onSettings?: () => void; onAbout?: () => void }> = ({ onSettings, onAbout }) => {
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const { showDropdownMenu, hideMenu } = useMenu();
 
-  useEffect(() => {
-    if (!open) return;
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
+  const handleSettingsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const menuItems: MenuItem[] = [
+      { id: 'settings', label: 'Settings', onClick: () => { onSettings?.(); hideMenu(); } },
+      { id: 'about', label: 'About', onClick: () => { onAbout?.(); hideMenu(); } },
+    ];
+
+    if (buttonRef.current) {
+      showDropdownMenu(menuItems, buttonRef.current, 'right');
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
-
-  const handleSettingsClick = () => {
-    setOpen(false);
-    onSettings?.();
-  };
-
-  const handleAboutClick = () => {
-    setOpen(false);
-    onAbout?.();
   };
 
   return (
-    <div className="toolbar-settings-dropdown" ref={dropdownRef}>
-      <button
-        className="toolbar-button"
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="true"
-        aria-expanded={open}
-      >
-        ⚙️
-      </button>
-      {open && (
-        <div className="toolbar-settings-menu">
-          <div className="toolbar-settings-menu-item">
-            <button onClick={handleSettingsClick}>Settings</button>
-          </div>
-          <div className="toolbar-settings-menu-item">
-            <button onClick={handleAboutClick}>About</button>
-          </div>
-        </div>
-      )}
-    </div>
+    <button
+      ref={buttonRef}
+      className="toolbar-button toolbar-settings"
+      onClick={handleSettingsClick}
+      aria-haspopup="true"
+      aria-label="Settings menu"
+    >
+      <img src="/icons/settings-gear.svg" alt="Settings" />
+    </button>
   );
 };
 

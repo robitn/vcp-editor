@@ -9,6 +9,7 @@ export class UndoRedoManager {
   private undoStack: HistoryState[] = [];
   private redoStack: HistoryState[] = [];
   private maxHistorySize: number;
+  private savedStateIndex: number = -1; // -1 means no saved state tracked
 
   constructor(maxHistorySize: number = 5) {
     this.maxHistorySize = maxHistorySize;
@@ -24,6 +25,10 @@ export class UndoRedoManager {
     // Limit stack size to maxHistorySize
     if (this.undoStack.length > this.maxHistorySize) {
       this.undoStack.shift(); // Remove oldest entry
+      // Adjust savedStateIndex if we removed the saved state
+      if (this.savedStateIndex > 0) {
+        this.savedStateIndex--;
+      }
     }
 
     // Clear redo stack when new action is performed
@@ -79,6 +84,23 @@ export class UndoRedoManager {
   clear(): void {
     this.undoStack = [];
     this.redoStack = [];
+    this.savedStateIndex = -1;
+  }
+
+  // Mark current position as saved (called when document is saved)
+  markAsSaved(): void {
+    this.savedStateIndex = this.undoStack.length - 1;
+  }
+
+  // Check if we're currently at the saved state
+  isAtSavedState(): boolean {
+    // If we marked the save at a time when undo stack was empty (savedStateIndex = -1),
+    // we're at saved state when undo stack is also empty
+    if (this.savedStateIndex === -1) {
+      return this.undoStack.length === 0;
+    }
+    // Otherwise, we're at saved state if undo stack length matches the saved index + 1
+    return this.undoStack.length === this.savedStateIndex + 1;
   }
 
   getUndoStackSize(): number {
