@@ -47,6 +47,18 @@ Enhance:
 ✅     - Add the functionality of Seetings > Grid tab to the View menu. (note: Settings is master and persistent, changes made via the View menu are volatile and do not last past App launches.)
 ✅     - Add "Save As" toolbar button (icon begins with saveas_) and wire into 'Save As' functionality.
 
+Windows Bugs!
+    - Menu key shortcuts are not working on Windows
+    - Newly opened window not resizing to the values stored in App support folder.
+    - Button Editor: can't add optional buttons - path name contains forward slashes.
+
+Layout (Windows & MacOS): 
+        - Button Editor dialog doesn't fit smaller screens, eg, less than 1920x1080. 
+            - XML panel must be resizeable (height from bottom by way of a drag-bar) and that size stored in app support settings.json. Make XML preview scrollable.
+        - Reduce Button preview size to 160px square.
+        - Replace Toolbar setting button text character to svg image "settings-gear.svg. Use the same html structure as other toolbar buttons.
+
+
 🛑 Later:
 Sort buttons by row then column.
 Generate / add to user manual.
