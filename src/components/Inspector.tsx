@@ -381,9 +381,8 @@ const Inspector: React.FC<InspectorProps> = ({
             newFilename: filename,
           });
 
-          // Store relative path only
-          const relativePath = `images/${filename}`;
-          updateImage({ path: relativePath });
+          // Store filename only - Export to CNC will add full path prefix
+          updateImage({ path: filename });
           onShowNotification?.(`Image copied to Work in Progress folder`, 'success');
         }
       } catch (error) {
