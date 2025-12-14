@@ -12,6 +12,7 @@ interface VcpGridProps {
   onDocumentChange: (document: VcpDocument) => void;
   gridSettings: GridSettings;
   vcpResourcesFolder: string;
+  defaultSaveLocation?: string;
   imageCacheBuster: number;
   onAddBorder?: () => void;
   onAddImage?: () => void;
@@ -34,6 +35,7 @@ const VcpGrid: React.FC<VcpGridProps> = ({
   onDocumentChange,
   gridSettings,
   vcpResourcesFolder,
+  defaultSaveLocation,
   imageCacheBuster,
   onAddBorder,
   onAddImage,
@@ -626,8 +628,9 @@ const VcpGrid: React.FC<VcpGridProps> = ({
       // Remove extension if present
       imageName = imageName.replace(/\.[^/.]+$/, '');
       
-      // Use shared utility to get image URL
-      const imageSrc = getImageUrl(vcpResourcesFolder, imageName);
+      // Use shared utility to get image URL from WIP folder, fall back to resources folder
+      const imageFolder = defaultSaveLocation || vcpResourcesFolder;
+      const imageSrc = getImageUrl(imageFolder, imageName);
 
       return (
         <div

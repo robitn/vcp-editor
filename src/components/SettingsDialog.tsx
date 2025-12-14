@@ -218,7 +218,7 @@ export default function SettingsDialog({ settings, onSave, onCancel, onChange }:
                 <div className="setting-row">
                   <label className="noninteractive">Work in progress folder</label>
                   <div className="folder-input-group">
-                    <input type="text" value={localSettings.files.defaultSaveLocation} onChange={(e) => updateFileSetting('defaultSaveLocation', e.target.value)} placeholder="Leave empty for system default" />
+                    <input type="text" value={localSettings.files.defaultSaveLocation} onChange={(e) => updateFileSetting('defaultSaveLocation', e.target.value)} placeholder="ex: C:\Users\YourName\Documents\VCP" />
                     <button className="folder-browse-button" onClick={async () => {
                       const { open } = await import('@tauri-apps/plugin-dialog');
                       const { homeDir } = await import('@tauri-apps/api/path');
@@ -233,7 +233,7 @@ export default function SettingsDialog({ settings, onSave, onCancel, onChange }:
                 <div className="setting-row">
                   <label>VCP resources folder</label>
                   <div className="folder-input-group">
-                    <input type="text" value={localSettings.files.vcpResourcesFolder} onChange={(e) => updateFileSetting('vcpResourcesFolder', e.target.value)} placeholder="Path to vcp folder (contains Buttons, Images, skins)" />
+                    <input type="text" value={localSettings.files.vcpResourcesFolder} onChange={(e) => updateFileSetting('vcpResourcesFolder', e.target.value)} placeholder="Path to vcp folder (containing new Buttons, Images, Skins)" />
                     <button className="folder-browse-button" onClick={async () => {
                       const { open } = await import('@tauri-apps/plugin-dialog');
                       const { homeDir } = await import('@tauri-apps/api/path');
@@ -242,7 +242,7 @@ export default function SettingsDialog({ settings, onSave, onCancel, onChange }:
                       if (selected) updateFileSetting('vcpResourcesFolder', selected as string);
                     }}>Browse...</button>
                   </div>
-                  <span className="help-text">VCP folder containing new Buttons, Images, and skins folders</span>
+                  <span className="help-text">Optional: Source folder for importing buttons/images. Leave blank if only shuffling existing elements</span>
                 </div>
 
                 <div className="setting-row">

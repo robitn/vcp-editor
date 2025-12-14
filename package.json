@@ -8,7 +8,13 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "tauri:build:windows": "npm run build && tauri build --target x86_64-pc-windows-gnu"
+    "tauri:build:windows": "npm run build && tauri build --target x86_64-pc-windows-gnu",
+    "test": "playwright test",
+    "test:stress": "playwright test undo-redo-stress",
+    "test:fool": "playwright test fool-tests",
+    "test:files": "playwright test file-operations",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -20,6 +26,7 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.0",
     "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",

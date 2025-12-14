@@ -177,14 +177,52 @@ function App() {
         const lastFilePath = await store.current.get<string>('lastFilePath');
         if (lastFilePath && typeof lastFilePath === 'string') {
           try {
-            const doc = await invoke<VcpDocument>("open_file", { path: lastFilePath });
+            let finalFilePath = lastFilePath;
+
+            // Check if file is from vcpResourcesFolder and copy to work in progress folder
+            if (settings.files.vcpResourcesFolder && settings.files.defaultSaveLocation) {
+              const vcpResourcesPath = settings.files.vcpResourcesFolder.toLowerCase();
+              const filePathLower = finalFilePath.toLowerCase();
+
+              if (filePathLower.startsWith(vcpResourcesPath)) {
+                // File is from vcpResourcesFolder, copy to work in progress folder
+                try {
+                  // Ensure folder structure exists
+                  await invoke('ensure_vcp_folder_structure', { basePath: settings.files.defaultSaveLocation });
+
+                  // Create destination path in work in progress folder
+                  const relativePath = finalFilePath.substring(settings.files.vcpResourcesFolder.length);
+                  const destPath = await join(settings.files.defaultSaveLocation, relativePath);
+
+                  // Ensure destination directory exists
+                  const destDir = await dirname(destPath);
+                  try {
+                    await mkdir(destDir, { recursive: true });
+                  } catch (error) {
+                    // Directory might already exist, continue
+                  }
+
+                  // Copy the file
+                  await copyFile(finalFilePath, destPath);
+
+                  finalFilePath = destPath;
+                  showNotification('File copied from VCP resources to work in progress folder', 'info');
+                } catch (error) {
+                  console.warn('Failed to copy file from VCP resources:', error);
+                  showNotification('Warning: Could not copy file to work in progress folder', 'warning');
+                }
+              }
+            }
+
+            const doc = await invoke<VcpDocument>("open_file", { path: finalFilePath });
             setDocument(doc);
-            setCurrentFilePath(lastFilePath);
+            setCurrentFilePath(finalFilePath);
             setIsDirty(false);
             setSelection(null);
             undoRedoManager.current.clear();
             undoRedoManager.current.markAsSaved();
             updateUndoRedoState();
+            await saveLastFilePath(finalFilePath);
             showNotification('Last file reopened', 'success');
             console.log('Last file opened successfully');
           } catch (error) {
@@ -485,16 +523,25 @@ function App() {
     if (!await checkUnsavedChanges('open')) return;
 
     try {
-      // Use vcpResourcesFolder for Open dialog
+      // Open dialog priority: WIP folder skins > Resources folder skins > current file dir > home
       let defaultPath: string | undefined;
 
-      if (settings.files.vcpResourcesFolder && settings.files.vcpResourcesFolder.trim() !== '') {
-        // Try to use skins subfolder if it exists, otherwise use root
+      // First priority: WIP folder (defaultSaveLocation) - user's working directory
+      if (settings.files.defaultSaveLocation && settings.files.defaultSaveLocation.trim() !== '') {
+        const skinsPath = await join(settings.files.defaultSaveLocation, 'skins');
+        defaultPath = skinsPath;
+      }
+      // Second priority: VCP Resources folder (if WIP not configured)
+      else if (settings.files.vcpResourcesFolder && settings.files.vcpResourcesFolder.trim() !== '') {
         const skinsPath = await join(settings.files.vcpResourcesFolder, 'skins');
         defaultPath = skinsPath;
-      } else if (currentFilePath) {
+      }
+      // Third priority: current file's directory
+      else if (currentFilePath) {
         defaultPath = await dirname(currentFilePath);
-      } else {
+      }
+      // Final fallback: home directory
+      else {
         defaultPath = await homeDir();
       }
 
@@ -1294,6 +1341,7 @@ function App() {
             onDocumentChange={updateDocument}
             gridSettings={settings.grid}
             vcpResourcesFolder={settings.files.vcpResourcesFolder}
+            defaultSaveLocation={settings.files.defaultSaveLocation}
             imageCacheBuster={imageCacheBuster}
             onAddBorder={handleAddBorder}
             onAddImage={handleAddImage}

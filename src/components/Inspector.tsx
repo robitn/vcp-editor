@@ -365,14 +365,16 @@ const Inspector: React.FC<InspectorProps> = ({
             return;
           }
 
-          if (!vcpResourcesFolder) {
-            onShowNotification?.('Please configure VCP Resources Folder in Settings first', 'warning');
+          // Use defaultSaveLocation (WIP) as destination, fall back to vcpResourcesFolder
+          const destFolder = defaultSaveLocation || vcpResourcesFolder;
+          if (!destFolder) {
+            onShowNotification?.('Please configure Work in Progress Folder in Settings first', 'warning');
             return;
           }
 
-          const imagesFolder = `${vcpResourcesFolder}/images`;
+          const imagesFolder = `${destFolder}/images`;
 
-          // Copy file to images folder
+          // Copy file to images folder (WIP destination)
           await invoke('copy_file_to_button_folder', {
             sourcePath,
             buttonFolder: imagesFolder,
@@ -382,7 +384,7 @@ const Inspector: React.FC<InspectorProps> = ({
           // Store relative path only
           const relativePath = `images/${filename}`;
           updateImage({ path: relativePath });
-          onShowNotification?.(`Image copied to images folder`, 'success');
+          onShowNotification?.(`Image copied to Work in Progress folder`, 'success');
         }
       } catch (error) {
         console.error("Failed to select image:", error);
